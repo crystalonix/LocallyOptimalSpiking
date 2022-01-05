@@ -1,5 +1,3 @@
-from distutils.command.config import config
-
 import numpy as np
 import signal_utils
 import gammatone_calculator
@@ -19,7 +17,7 @@ sample_rate = 0
 
 
 def init(number_of_kernels, kernel_array=None, sampling_rate=configuration.sampling_rate, normalize=True,
-         mode='compressed', load_from_cache=True):
+         mode=configuration.mode, load_from_cache=True):
     """
     Initializes a number of kernels by populating the necessary data structures
     :param load_from_cache:
@@ -235,7 +233,7 @@ def fetch_kernel_ip_directly(index1, index2, time_delta):
             return kernel_inner_products[index1][index2][position]
 
 
-def get_kernel_inner_prod_signal(index1, index2, mode='compressed', start=None, end=None):
+def get_kernel_inner_prod_signal(index1, index2, mode=configuration.mode, start=None, end=None):
     if start is None:
         start = -len(all_kernels[index1])
     if end is None:
@@ -249,7 +247,7 @@ def get_kernel_inner_prod_signal(index1, index2, mode='compressed', start=None, 
     return signal
 
 
-def get_kernel_kernel_inner_prod(index1, index2, time_delta, mode="expanded"):
+def get_kernel_kernel_inner_prod(index1, index2, time_delta, mode=configuration.mode):
     """
     Returns the inner product of two kernels separated by a time_delta. By convention kernel index2 is lagging from
     kernel index1 by amount time_delta

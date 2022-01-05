@@ -103,11 +103,15 @@ def solve_for_coefficients_by_torch(P, T):
     size = len(T)
     P = torch.tensor(P, dtype=torch.float64)
     T = torch.tensor(T, dtype=torch.float64)
-    print(T)
-    return torch.lstsq(T, P)
+    return torch.lstsq(T, P).solution
 
 
 def solve_for_coefficients_by_tf(P, T):
     P = tf.convert_to_tensor(P)
     T = tf.convert_to_tensor(T)
     return tf.linalg.lstsq(P, T, fast=True)
+
+
+def solve_for_inverse_by_torch(p_matrix):
+    P = torch.tensor(p_matrix, dtype=torch.float64)
+    return torch.inverse(P)

@@ -23,9 +23,13 @@ def plot_function(data, xrange=None, x_label=None, y_label=None, title=None):
         plt.show()
 
 
-def plot_functions(funcs, num_cols=1, xranges=None, x_labels=None, y_labels=None):
+def plot_functions(funcs, num_cols=1, plot_titles=None, xranges=None, x_labels=None, y_labels=None, x_ticks_on=True,
+                   y_ticks_on=False):
     """
     Plots a list of funcs arranged in a grid
+    :param x_ticks_on:
+    :param y_ticks_on:
+    :param plot_titles:
     :param funcs:
     :param num_cols:
     :param xranges:
@@ -41,20 +45,45 @@ def plot_functions(funcs, num_cols=1, xranges=None, x_labels=None, y_labels=None
             index = i * num_cols + j
             if index >= len(funcs):
                 break
-            axs[i, j].plot(funcs[i * num_cols + j])
+            if num_cols == 1:
+                axs[i].plot(funcs[i * num_cols + j])
+                axs[i].set_title(plot_titles[i])
+                if not x_ticks_on:
+                    axs[i].set_xticks([])
+            else:
+                axs[i, j].plot(funcs[i * num_cols + j])
+                axs[i, j].set_title(plot_titles[index])
+                if not x_ticks_on:
+                    axs[i, j].set_xticks([])
     plt.show()
 
 
-def plot_functions_in_one_plot(funcs, xranges=None, x_label=None, y_label=None):
+def plot_functions_in_one_plot(x_funcs, y_funcs=None, legends=None, colors=None, xranges=None, x_label=None,
+                               y_label=None):
     """
      displays a given list of functions within a single plot
-    :param funcs:
+    :param colors:
+    :param legends:
+    :param x_funcs:
+    :param y_funcs:
     :param xranges:
     :param x_label:
     :param y_label:
     """
-    for i in range(len(funcs)):
-        plt.plot(funcs[i])
+    for i in range(len(x_funcs)):
+        c = None if colors is None else colors[i]
+        lb = None if legends is None else legends[i]
+        if y_funcs is None:
+            if c is not None:
+                plt.plot(x_funcs[i], c, label=lb)
+            else:
+                plt.plot(x_funcs[i], label=lb)
+        else:
+            if c is not None:
+                plt.plot(x_funcs[i], y_funcs[i], c, label=lb)
+            else:
+                plt.plot(x_funcs[i], y_funcs[i], label=lb)
+    plt.legend()
     plt.show()
 
 
@@ -88,12 +117,6 @@ def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5, title='s
     plt.show()
 
 
-r = 7
-k1 = 0.5
-a1 = 1.2
-k2 = 0.5
-k3 = 0.5
-x = np.arange(0, 0.5, 0.001)
-y = (1 - r * x) * (1 - r * x) / (1 - x * x)
-plt.plot(x, y)
-plt.show()
+# x = [[2, 3, 7], [4, 7, 10], [1, 5, 9]]
+# y = [[1, 2, 3], [2, 3, 5], [4, 5, 6]]
+# plot_functions_in_one_plot(x_funcs=x, y_funcs=y, legends=['first', 'second', 'third'])

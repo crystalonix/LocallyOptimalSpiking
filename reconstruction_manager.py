@@ -11,6 +11,7 @@ import configuration
 import plot_utils
 import gammatone_calculator
 import tensorflow as tf
+import iterative_spike_generator
 
 
 def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
@@ -22,7 +23,7 @@ def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
     return all_convolutions
 
 
-def init_signal(signal, mode='compressed'):
+def init_signal(signal, mode=configuration.mode):
     """
     Initialize the necessary global data structures for the given signal
     :param mode:
@@ -34,7 +35,7 @@ def init_signal(signal, mode='compressed'):
     return signal_norm_square, signal_kernel_convolutions  # , signal_kernel_bspline_convolutions
 
 
-def calculate_signal_kernel_convs(signal, mode='compressed'):
+def calculate_signal_kernel_convs(signal, mode=configuration.mode):
     """
     This function calculates the convolution of a signal with the given kernels
     :param mode:
@@ -58,11 +59,11 @@ def calculate_reconstruction(spike_times, spike_indexes, threshold_crossing_valu
     Once spike times are computed this method computes the reconstruction coefficients
     """
     p_matrix = calculate_p_matrix(spike_times, spike_indexes)
-    reconstruction_coefficients = common_utils.solve_for_coefficients(p_matrix, threshold_crossing_values)
+    reconstruction_coefficients = common_utils.solve_for_coefficients(p_matrix, threshold_crossing_values).numpy()
     return reconstruction_coefficients
 
 
-def calculate_p_matrix(spike_times, spike_indexes, mode='compressed'):
+def calculate_p_matrix(spike_times, spike_indexes, mode=configuration.mode):
     """
     This method populates the entries of the p_matrix
     :param mode:
@@ -83,7 +84,7 @@ def calculate_p_matrix(spike_times, spike_indexes, mode='compressed'):
                                  f'at times{spike_times[i]} and {spike_times[j]} with exception: {e}')
     if configuration.verbose:
         end_time = time.process_time()
-        print(f'time taken to compute p_matrix: {end_time- start_time}')
+        print(f'time taken to compute p_matrix: {end_time - start_time}')
     return p_matrix
 
 
@@ -117,7 +118,7 @@ def get_reconstructed_signal(signal_length, spike_times, spike_indexes, reconstr
     reconstructed_signal = np.zeros(signal_length)
     last_signal_index = signal_length - 1
     for i in range(len(spike_times)):
-        print(f'adding the component number: {i}')
+        # print(f'adding the component number: {i}')
         this_component = reconstruction_coefficients[i] * kernel_manager.all_kernels[spike_indexes[i]]
         ti = int(spike_times[i])
         reconstructed_signal[int(np.maximum(ti - len(this_component) + 1, 0)):int(np.minimum(ti, last_signal_index))] = \
@@ -125,7 +126,7 @@ def get_reconstructed_signal(signal_length, spike_times, spike_indexes, reconstr
             int(np.maximum(ti - len(this_component) + 1, 0)):int(np.minimum(ti, last_signal_index))] \
             + this_component[int(np.minimum(len(this_component) - 1, ti)):int(np.maximum(0, ti - last_signal_index)):-1]
     if configuration.verbose:
-        print(f'reconstruction took: {time.process_time()-start_time}s')
+        print(f'reconstruction took: {time.process_time() - start_time}s')
     return reconstructed_signal
 
 
@@ -139,14 +140,16 @@ def calculate_reconstruction_error_rate_fast(reconstruction_coefficients, thresh
     :type signal_norm_square: object
     :return:
     """
-    return (signal_norm_square - np.dot(reconstruction_coefficients, threshold_crossing_values)) / signal_norm_square
+    return (signal_norm_square - np.dot(np.ravel(reconstruction_coefficients),
+                                        np.ravel(threshold_crossing_values))) / signal_norm_square
 
 
 def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kernels=-1, kernel_frequencies=None,
                                        need_error_rate_fast=True, need_error_rate_accurate=False,
-                                       need_reconstructed_signal=False, computation_mode='compressed'):
+                                       need_reconstructed_signal=False, computation_mode=configuration.mode):
     """
 
+    :param computation_mode:
     :param signal:
     :param init_kernel:
     :param number_of_kernels:
@@ -161,6 +164,47 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
     signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
     sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
         signal_kernel_convolutions, need_error_rate_fast)
+    recons = None
+    error_rate_fast = None
+    if need_error_rate_accurate:
+        pass
+    if need_error_rate_fast:
+        error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, thrs_values, signal_norm_square)
+    if need_reconstructed_signal:
+        recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
+    return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons
+
+
+def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,
+                                                   kernel_frequencies=None,
+                                                   need_error_rate_fast=True, need_error_rate_accurate=False,
+                                                   need_reconstructed_signal=False, computation_mode=configuration.mode,
+                                                   window_mode=False, window_size=-1, ip_threshold=0.01,
+                                                   recompute_recons_coeff=True):
+    """
+    This method uses iterative technique to generate spikes and reconstruct a signal
+    :param recompute_recons_coeff:
+    :param ip_threshold: threshold for inner product of the new spike in the current span
+    :param computation_mode:
+    :param window_size:
+    :param window_mode:
+    :param signal:
+    :param init_kernel:
+    :param number_of_kernels:
+    :param kernel_frequencies:
+    :param need_error_rate_fast:
+    :param need_error_rate_accurate:
+    :param need_reconstructed_signal:
+    :return:
+    """
+    if init_kernel:
+        kernel_manager.init(number_of_kernels, kernel_frequencies)
+    signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
+    sp_times, sp_indexes, thrs_values, recons_coeffs = iterative_spike_generator.spike_and_reconstruct_iteratively(
+        signal_kernel_convolutions, window_mode=window_mode, window_size=window_size,
+        norm_threshold_for_new_spike=ip_threshold)
+    if recompute_recons_coeff:
+        recons_coeffs = calculate_reconstruction(sp_times, sp_indexes, thrs_values)
     recons = None
     error_rate_fast = None
     if need_error_rate_accurate:
