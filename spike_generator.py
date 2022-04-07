@@ -10,7 +10,7 @@ import configuration
 
 
 def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
-                          threshold=configuration.spiking_threshold):
+                          threshold=configuration.spiking_threshold, selected_kernel_indexes=None):
     """
     Computes the spikes for all kernels
     """
@@ -19,12 +19,18 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
     spike_indexes = []
     spike_times = []
     threshold_values = []
+    spike_counts = np.zeros(len(all_convolutions))
     for i in range(len(all_convolutions)):
+        if selected_kernel_indexes is not None and i not in selected_kernel_indexes:
+            continue
         this_kernel_spikes, ths = calculate_spikes_for_one_kernel(all_convolutions, i, ahp_period, threshold)
         spike_times = np.concatenate([spike_times, this_kernel_spikes])
         spike_indexes = np.concatenate([spike_indexes, int(i) * np.ones(len(this_kernel_spikes))]).astype(int)
+        if configuration.verbose:
+            spike_counts[i] = len(this_kernel_spikes)
         threshold_values = np.concatenate([threshold_values, ths])
     if configuration.verbose:
+        print(f'check the spike counts here: {spike_counts}')
         print(
             f'number of spikes: {len(spike_times)} and time to compute the spike: {time.process_time() - start_time}s')
     return spike_times, spike_indexes, threshold_values

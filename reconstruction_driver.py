@@ -9,6 +9,8 @@ import reconstruction_manager
 import gammatone_calculator
 import signal_utils
 import kernel_manager
+import matplotlib.pyplot as plt
+import common_utils
 
 
 def split_signal_into_snippets(signal_index, sample_length, norm_threshold=0):
@@ -51,47 +53,74 @@ def drive_full_signal_reconstruction(signal_index, sample_length):
 
 
 def drive_select_snippet_reconstruction(signal_index, sample_length, norm_threshold=0.0,
-                                        need_reconstructed_signal=False):
+                                        need_reconstructed_signal=False, ahp_period=configuration.ahp_period,
+                                        selected_kernel_indexes=None):
     snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
     snippet = signal_utils.upsample(snippet)
     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction = \
         reconstruction_manager.drive_single_signal_reconstruction(
-            snippet, False, need_reconstructed_signal=need_reconstructed_signal)
+            snippet, False, need_reconstructed_signal=need_reconstructed_signal, ahp_period=ahp_period,
+            selected_kernel_indexes=selected_kernel_indexes)
     return snippet, spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction
 
 
 def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length, norm_threshold=0.0,
                                                     need_reconstructed_signal=False, window_mode=False, window_size=-1,
-                                                    ip_threshold=0.001, rectify_coefficients=False):
-    snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
+                                                    new_kernel_ip_threshold=0.001, z_threshold=0.5, rectify_coefficients=False,
+                                                    show_z_vals=False, test_signal=None, selected_kernel_indexes=None):
+    if test_signal is not None:
+        snippet = test_signal
+        norm = signal_utils.get_signal_norm_square(snippet, samp_rate=configuration.actual_sampling_rate)
+        norm = np.sqrt(norm)
+    else:
+        snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
     snippet = signal_utils.upsample(snippet)
-    spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction = \
-        reconstruction_manager.drive_single_signal_reconstruction_iteratively(
-            snippet, False, need_reconstructed_signal=need_reconstructed_signal, window_mode=window_mode,
-            window_size=window_size, ip_threshold=ip_threshold, recompute_recons_coeff=rectify_coefficients)
-    return snippet, spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction
+    spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction, \
+    all_convs, z_scores, kernel_projections = reconstruction_manager.drive_single_signal_reconstruction_iteratively(
+        snippet, False, need_reconstructed_signal=need_reconstructed_signal, window_mode=window_mode,
+        window_size=window_size, ip_threshold=new_kernel_ip_threshold, recompute_recons_coeff=rectify_coefficients,
+        show_z_vals=show_z_vals, z_threshold=z_threshold, signal_norm_sq=norm * norm,
+        selected_kernel_indexes=selected_kernel_indexes)
+    return snippet, spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, \
+           error_rate, reconstruction, all_convs, z_scores, kernel_projections
 
 
+ahp = configuration.ahp_period / 1.0
+sample_numbers = [7]
+# [i for i in range(5, 10)]
 sample_number = 5
 sample_len = 10000
-number_of_kernel = 10
-norm_thrs = 0.00001
-win_mode = True
+number_of_kernel = 2
+select_kernel_indexes = [0]
+signal_norm_thrs = 1e-4
+win_mode = False
 win_size = 30
-ip_thrs = 0.9
-win_sizes = [30
+ip_thrs = 1e-8
+z_thrs = np.array([1e-4, 0.001]) * 1e-8  # 1e-8
+# z_thrs = np.array([0.0001, .001, .01, .1, 1.0]) * 1e-6
+win_sizes = [50
              # ,20, 30
              # ,40
              ]
 ip_thresholds = [
     # [0.9, 0.95, 0.995, 0.9995],
     # [0.8, 0.9, 0.95, 0.99, 0.999],
-    list(np.arange(0.5, 0.9, 0.05))
+    list(np.arange(0.5, 0.7, 0.02))
     # [0.7, 0.8, 0.9, 0.95, 0.99]
     # ,[0.5, 0.6, 0.7, 0.8, 0.9]
 ]
+iterative_recons = True
+direct_recons = True
 rectify_coeffs = True
-single_snippet = False
+single_snippet = True
+show_z = False
+turn_on_recons_plot = True
+show_z_scores_plot = True
+club_z_score_with_proj_thrs = False
+
+params_grid = {
+    'sample_number': [i for i in range(5, 10)],
+}
 # configuration.ahp_period = configuration.ahp_period/2.0
 # print(f'all available frequencies are: '
 #       f'{gammatone_calculator.get_kernel_frequencies(gammatone_calculator.get_kernel_indexes(number_of_kernel))}')
@@ -125,11 +154,14 @@ if not single_snippet:
         i = i + 1
         for i_th in ip_thresholds[i]:
             print(f'running for window size:{w} and threshold:{i_th}')
-            _, sp_times, _, _, _, error_rate_fast_itr, recons_itr = \
-                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len, norm_threshold=norm_thrs,
+            _, sp_times, _, _, _, error_rate_fast_itr, recons_itr, all_convs, z_scores, kernel_projections = \
+                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len,
+                                                                norm_threshold=signal_norm_thrs,
                                                                 need_reconstructed_signal=True, window_mode=win_mode,
-                                                                window_size=w, ip_threshold=i_th,
-                                                                rectify_coefficients=rectify_coeffs)
+                                                                window_size=w, new_kernel_ip_threshold=i_th,
+                                                                rectify_coefficients=rectify_coeffs,
+                                                                show_z_vals=show_z_scores_plot,
+                                                                z_threshold=z_thrs)
             tmp.append(error_rate_fast_itr)
             sp_tmp.append(len(sp_times))
 
@@ -139,28 +171,60 @@ if not single_snippet:
     plot_utils.plot_functions_in_one_plot(all_errors, sp_times_len, legends=legends)
 
 # TODO: uncomment for single snippet recons
-if (single_snippet):
-    this_signal, sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons = \
-        drive_select_snippet_reconstruction_iteratively(sample_number, sample_len, norm_threshold=norm_thrs,
-                                                        need_reconstructed_signal=True, window_mode=win_mode,
-                                                        window_size=win_size, ip_threshold=ip_thrs,
-                                                        rectify_coefficients=rectify_coeffs)
-    print(f'iterative recons error rate is: {error_rate_fast} and number of spike: {len(sp_indexes)}')
-    # plot_utils.plot_function(recons, title='iterative reconstruction')
-    _, sp_times_1, sp_indexes_1, _, recons_coeffs_1, error_rate_fast_1, recons_1 = \
-        drive_select_snippet_reconstruction(sample_number, sample_len, norm_threshold=norm_thrs,
-                                            need_reconstructed_signal=True)
-    # plot_utils.plot_function(recons_1, title='Normal reconstruction')
-    print(f'batch recons error rate is: {error_rate_fast_1} and number of spike: {len(sp_indexes_1)}')
+if single_snippet:
+    if iterative_recons:
+        params_dict = {}
+        for i in range(len(sample_numbers)):
+            sample_number = sample_numbers[i]
+            this_signal, sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, \
+            recons, all_convs, z_vals, kernel_projections = \
+                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len, norm_threshold=signal_norm_thrs,
+                                                                need_reconstructed_signal=True, window_mode=win_mode,
+                                                                window_size=win_size, new_kernel_ip_threshold=ip_thrs,
+                                                                rectify_coefficients=rectify_coeffs, show_z_vals=show_z_scores_plot,
+                                                                z_threshold=z_thrs,
+                                                                selected_kernel_indexes=select_kernel_indexes)
+            print(f'iterative recons error rate is: {error_rate_fast} and number of spike: {len(sp_indexes)}')
+            print(f'model description:- z_threshold {z_thrs}, number of kernels: {number_of_kernel}, '
+                  f'schur power: {configuration.SCHUR_POWER}')
+            common_utils.sort_spikes_on_kernel_indexes(spike_times=sp_times, spike_indexes=sp_indexes,
+                                                       num_kernels=number_of_kernel)
+            # plot_utils.plot_function(recons, title='iterative reconstruction')
+
+    if direct_recons:
+        _, sp_times_1, sp_indexes_1, _, recons_coeffs_1, error_rate_fast_1, recons_1 = \
+            drive_select_snippet_reconstruction(sample_number, sample_len, norm_threshold=signal_norm_thrs,
+                                                need_reconstructed_signal=True, ahp_period=ahp,
+                                                selected_kernel_indexes=select_kernel_indexes)
+    if not iterative_recons:
+        plot_utils.plot_function(recons_1,
+                                 title=f'normal reconstruction with{len(sp_indexes_1)}'
+                                       f' spikes and error rate:{error_rate_fast_1}')
+        print(f'batch recons error rate is: {error_rate_fast_1} and number of spike: {len(sp_indexes_1)}')
     # plot_utils.plot_functions_in_one_plot([this_signal, recons, recons_1])
 
     # plot_utils.plot_function(this_signal, title='original signal')
-    plot_utils.plot_functions([this_signal, recons, recons_1],
-                              plot_titles=['original signal',
-                                           f'iterative reconstruction with {len(sp_times)} spikes and error rate: {error_rate_fast}',
-                                           f'normal reconstruction with{len(sp_indexes_1)} spikes and error rate:{error_rate_fast_1}'],
-                              x_ticks_on=False)
-    # plot_utils.plot_function(recons)
+    if iterative_recons and turn_on_recons_plot:
+        plot_utils.plot_functions([this_signal, recons, recons_1],
+                                  plot_titles=['original signal',
+                                               f'iterative reconstruction with {len(sp_times)} spikes and error rate: {error_rate_fast}',
+                                               f'normal reconstruction with{len(sp_indexes_1)} spikes and error rate:{error_rate_fast_1}'],
+                                  x_ticks_on=False)
+        plot_utils.plot_multiple_spike_trains([sp_times, sp_times_1], [sp_indexes, sp_indexes_1], plot_titles=[
+            f'spikes plot for iterative reconstruction with total {len(sp_times)}spikes',
+            f'spikes plot for normal reconstruction with total {len(sp_times_1)}spikes'])
+        if show_z:
+            plot_utils.plot_functions(z_vals + all_convs,
+                                      plot_titles=['convs n z_scores' for i in range(len(z_vals) + len(all_convs))])
+    if show_z_scores_plot:
+        for this_index in select_kernel_indexes:
+            plot_utils.plot_kernel_spike_profile(sp_times[sp_indexes == this_index], all_convs[this_index],
+                                                 z_vals[this_index], kernel_projections[this_index],
+                                                 club_z_score_threshold=club_z_score_with_proj_thrs,
+                                                 kernel_index=this_index)
+
+        plt.show()
+        # plot_utils.plot_function(recons)
     print('we are done here')
 ########################################################################################
 ####################### bring this back after checking ################################

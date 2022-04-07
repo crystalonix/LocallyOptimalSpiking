@@ -90,6 +90,8 @@ def solve_for_coefficients(P, T, method='torch'):
     :param method:
     :return:
     """
+    if len(P) == 0:
+        return torch.tensor([])
     if method == 'torch':
         return solve_for_coefficients_by_torch(P, T)
     elif method == 'tensorflow':
@@ -115,3 +117,93 @@ def solve_for_coefficients_by_tf(P, T):
 def solve_for_inverse_by_torch(p_matrix):
     P = torch.tensor(p_matrix, dtype=torch.float64)
     return torch.inverse(P)
+
+
+def p_inv_iteratively_torch(p_inv_old, new_col, new_col_ip, schur_complement=None, fixed=False):
+    """
+    :param fixed:
+    :param schur_complement: this is the inverse of the norm of the perpendicular component
+    of the new spike wrt to the span of existing kernels
+    :param p_inv_old: (n-1)X(n-1) matrix which is the inverse of the P-matrix of the previous step
+    :param new_col: the inner products of the new spike with other spikes as a column vector
+    :param new_col_ip: p_inv_old X new_col
+    """
+    assert len(new_col) == len(p_inv_old)
+    if schur_complement is None:
+        schur_complement = 1 - np.dot(new_col, new_col_ip)
+    p_inv_new = torch.zeros(len(new_col) + 1, len(new_col) + 1, dtype=torch.float64)
+
+    torch.outer(torch.tensor(new_col_ip), torch.tensor(new_col_ip), out=p_inv_new[0:len(new_col), 0:len(new_col)])
+
+    p_inv_new[len(new_col), 0: len(new_col)] = -1 * torch.tensor(new_col_ip.T)
+    p_inv_new[0: len(new_col), len(new_col)] = -1 * torch.tensor(new_col_ip)
+    p_inv_new[len(new_col), len(new_col)] = 1
+
+    if fixed:
+        p_inv_new = p_inv_new / schur_complement
+    else:
+        n = configuration.SCHUR_POWER
+        p_inv_new = p_inv_new * (schur_complement ** n)
+    # print(f'check the intermediate: \n {np.array(p_inv_new)}')
+    p_inv_new[0:len(new_col), 0:len(new_col)] += p_inv_old
+    # print(f'check the intermediate2: \n {np.array(p_inv_new)}')
+    return p_inv_new
+
+
+def sort_spikes_on_kernel_indexes(spike_times, spike_indexes, num_kernels, display=True):
+    all_spikes = [None for i in range(num_kernels)]
+    for i in range(len(spike_times)):
+        ind = spike_indexes[i]
+        if all_spikes[ind] is None:
+            all_spikes[ind] = []
+        all_spikes[ind].append(spike_times[i])
+    if display:
+        for i in range(num_kernels):
+            print(f'spikes of kernel {i} are:\n {all_spikes[i]}')
+    return all_spikes
+
+
+# def matrix_sup_norm(matrix):
+
+
+sz = 2
+p_test = np.random.rand(sz, sz)
+p_test = p_test + p_test.T
+p_test = np.array([[1.0, 0.707], [0.707, 1.0]])
+# p_test[3:3] = 1.0
+eta = p_test[sz - 1, :sz - 1]
+print(f'check eta values: {eta}')
+p_test_inv_old = np.linalg.inv(p_test[:sz - 1, :sz - 1])
+p_test_inv_full = np.linalg.inv(p_test)
+beta = np.dot(p_test_inv_old, eta)
+
+# schur_comp = 1.0 / (1.0 - np.dot(eta, beta))
+p_test_inv_new = p_inv_iteratively_torch(p_test_inv_old, eta, beta)
+print(f'check the new p_inv: {p_test_inv_full}')
+print(f'check the difference in two inverses:\n{p_test_inv_full - p_test_inv_new.numpy()}')
+
+
+#
+# print(f'check the Schur value: {schur_comp}')
+# print(f'the original p: \n{p_test}')
+# print(f'check the p full inv:\n {p_test_inv_full} \n full ans: {np.dot(p_test, p_test_inv_full)}')
+# print(f'check the iterative full inv: \n{np.array(p_test_inv_new)}\n iter ans: {np.dot(p_test, p_test_inv_new)}')
+def calculate_cond_number(p_matrix):
+    """
+    Returns the condition number of a given 2-D matrix
+    :rtype: any 2-D matrix
+    """
+    return np.linalg.cond(p_matrix)
+
+
+def multiply_by_transpose(c_matrix):
+    """
+    Reurns the product a matrix with its transpose
+    :param c_matrix:
+    :return: product of the matrix and its transpose
+    """
+    return np.dot(c_matrix, c_matrix.transpose())
+
+#
+# c = np.array([[1, 2], [0, 1]])
+# print(f'matrix product: {multiply_by_transpose(c)}')

@@ -59,6 +59,9 @@ def calculate_reconstruction(spike_times, spike_indexes, threshold_crossing_valu
     Once spike times are computed this method computes the reconstruction coefficients
     """
     p_matrix = calculate_p_matrix(spike_times, spike_indexes)
+
+    # p_inv = common_utils.solve_for_inverse_by_torch(p_matrix)
+    # reconstruction_coefficients = np.dot(p_inv, threshold_crossing_values)
     reconstruction_coefficients = common_utils.solve_for_coefficients(p_matrix, threshold_crossing_values).numpy()
     return reconstruction_coefficients
 
@@ -88,14 +91,19 @@ def calculate_p_matrix(spike_times, spike_indexes, mode=configuration.mode):
     return p_matrix
 
 
-def calculate_spike_times_and_reconstruct(signal_kernel_convs, reconstruction=True):
+def calculate_spike_times_and_reconstruct(signal_kernel_convs, reconstruction=True,
+                                          ahp_period=configuration.ahp_period, selected_kernel_indexes=None):
     """
     This method calculates the spike times and calculates the reconstruction coefficients
+    :param selected_kernel_indexes:
+    :param ahp_period:
     :param signal_kernel_convs:
     :param reconstruction:
     :return:
     """
-    spike_times, spike_indexes, threshold_values = spike_generator.calculate_spike_times(signal_kernel_convs)
+    spike_times, spike_indexes, threshold_values = spike_generator. \
+        calculate_spike_times(signal_kernel_convs, ahp_period=ahp_period,
+                              selected_kernel_indexes=selected_kernel_indexes)
     if len(spike_times) == 0:
         return spike_times, spike_indexes, None, None
     recons_coeffs = None
@@ -146,9 +154,12 @@ def calculate_reconstruction_error_rate_fast(reconstruction_coefficients, thresh
 
 def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kernels=-1, kernel_frequencies=None,
                                        need_error_rate_fast=True, need_error_rate_accurate=False,
-                                       need_reconstructed_signal=False, computation_mode=configuration.mode):
+                                       need_reconstructed_signal=False, computation_mode=configuration.mode,
+                                       ahp_period=configuration.ahp_period, selected_kernel_indexes=None):
     """
 
+    :param selected_kernel_indexes:
+    :param ahp_period:
     :param computation_mode:
     :param signal:
     :param init_kernel:
@@ -163,7 +174,8 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
     sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
-        signal_kernel_convolutions, need_error_rate_fast)
+        signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period,
+        selected_kernel_indexes=selected_kernel_indexes)
     recons = None
     error_rate_fast = None
     if need_error_rate_accurate:
@@ -180,9 +192,14 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
                                                    need_error_rate_fast=True, need_error_rate_accurate=False,
                                                    need_reconstructed_signal=False, computation_mode=configuration.mode,
                                                    window_mode=False, window_size=-1, ip_threshold=0.01,
-                                                   recompute_recons_coeff=True):
+                                                   z_threshold=0.5, recompute_recons_coeff=True, show_z_vals=False,
+                                                   signal_norm_sq=None, selected_kernel_indexes=None):
     """
     This method uses iterative technique to generate spikes and reconstruct a signal
+    :param selected_kernel_indexes:
+    :param signal_norm_sq:
+    :param z_threshold:
+    :param show_z_vals:
     :param recompute_recons_coeff:
     :param ip_threshold: threshold for inner product of the new spike in the current span
     :param computation_mode:
@@ -200,9 +217,11 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     if init_kernel:
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
-    sp_times, sp_indexes, thrs_values, recons_coeffs = iterative_spike_generator.spike_and_reconstruct_iteratively(
-        signal_kernel_convolutions, window_mode=window_mode, window_size=window_size,
-        norm_threshold_for_new_spike=ip_threshold)
+    sp_times, sp_indexes, thrs_values, recons_coeffs, z_scores, kernel_projections = iterative_spike_generator. \
+        spike_and_reconstruct_iteratively(signal_kernel_convolutions, window_mode=window_mode, window_size=window_size,
+                                          norm_threshold_for_new_spike=ip_threshold, z_thresholds=z_threshold,
+                                          show_z_scores=show_z_vals, signal_norm_square=signal_norm_sq,
+                                          selected_kernel_indexes=selected_kernel_indexes)
     if recompute_recons_coeff:
         recons_coeffs = calculate_reconstruction(sp_times, sp_indexes, thrs_values)
     recons = None
@@ -213,7 +232,8 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
         error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, thrs_values, signal_norm_square)
     if need_reconstructed_signal:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
-    return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons
+    return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, \
+           signal_kernel_convolutions, z_scores, kernel_projections
 
 # # configuration.upsample_factor = 10
 # # configuration.ahp_period = 100.0 * configuration.upsample_factor

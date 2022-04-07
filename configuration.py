@@ -1,5 +1,5 @@
 NUMBER_OF_BSPLINE_COMPONENTS = 200
-
+SCHUR_POWER = -1.0
 upsample_factor = 10
 ahp_period = 20.0 * upsample_factor
 ahp_high_value = 1000.0 * upsample_factor
@@ -11,4 +11,5 @@ number_of_threads = 10
 verbose = True
 debug = False
 mode = "expanded"
+window_size = 10
 # 'compressed'
