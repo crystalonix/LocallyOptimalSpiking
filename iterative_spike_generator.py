@@ -30,7 +30,7 @@ def update_c_matrix(c_matrix, eta_values, zeta, beta_values, window_mode=False, 
 
 def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, window_size=-1,
                                       norm_threshold_for_new_spike=0.1, z_thresholds=0.5, show_z_scores=False,
-                                      signal_norm_square=None, selected_kernel_indexes=None, preconditioning=False):
+                                      signal_norm_square=None, selected_kernel_indexes=None, preconditioning=True):
     p_matrix = []
     p_inv_matrix = []
     c_matrix = []
@@ -117,6 +117,7 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
         ########### add the spike and spike index here ###########
         ##########################################################
         if this_spike_index > -1:
+            print(f'producing spike #{len(spike_times) + 1}')
             ##########################################################
             ######## TODO: if window mode compress this part #########
             spike_times = np.append(spike_times, t)
@@ -139,25 +140,30 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
             st = time.process_time()
             if preconditioning:
                 # TODO: check if this has to be beta_next or beta_now && eta_vals now or next
-                c_matrix, p_inv_matrix = update_c_matrix(c_matrix, eta_vals_now[this_spike_index],
+                # TODO: remove the recomputation of p_matrix
+                c_matrix, p_inv_matrix_new = update_c_matrix(c_matrix, eta_vals_now[this_spike_index],
                                                          np.sqrt(this_zeta_val), beta_vals_now[this_spike_index],
                                                          window_mode, window_size)
-                p_matrix, _ = update_p_matrix_and_inv(p_matrix, eta_vals_now[this_spike_index], zeta_values,
-                                                      beta_vals_now[this_spike_index], p_inv_matrix,
-                                                      window_mode, window_size)
-                mat_1 = np.dot(c_matrix.transpose(), np.dot(p_matrix, c_matrix))
-                mat_2 = np.dot(p_matrix, np.dot(c_matrix, c_matrix.transpose()))
-                print(f'Spike number# {len(spike_times)} is produced with zeta score: {np.sqrt(this_zeta_val)}')
-                print(f'the norm of the mat_1-eye: {np.linalg.norm(mat_1 - np.eye(len(mat_1)))}'
-                      # f', {mat_1}'
-                      )
-                print(f'the norm of the mat_2-eye: {np.linalg.norm(mat_2 - np.eye(len(mat_2)))}'
-                      # f', {mat_2}'
-                      )
+                # p_matrix, _ = update_p_matrix_and_inv(p_matrix, eta_vals_now[this_spike_index], zeta_values,
+                #                                       beta_vals_now[this_spike_index], p_inv_matrix,
+                #                                       window_mode, window_size)
+                p_inv_matrix = p_inv_matrix_new
+                recons_coeffs = np.dot(p_inv_matrix, threshold_values)
+                residual_norm_square = signal_norm_square - np.dot(threshold_values, recons_coeffs)
+                print(f'new residual norm square: {residual_norm_square}')
+                # mat_1 = np.dot(c_matrix.transpose(), np.dot(p_matrix, c_matrix))
+                # mat_2 = np.dot(p_matrix, np.dot(c_matrix, c_matrix.transpose()))
+                # print(f'Spike number# {len(spike_times)} is produced with zeta score: {np.sqrt(this_zeta_val)}')
+                # print(f'the norm of the mat_1-eye: {np.linalg.norm(mat_1 - np.eye(len(mat_1)))}'
+                #       # f', {mat_1}'
+                #       )
+                # print(f'the norm of the mat_2-eye: {np.linalg.norm(mat_2 - np.eye(len(mat_2)))}'
+                #       # f', {mat_2}'
+                #       )
                 print(f'norm of beta values is: {np.linalg.norm(beta_vals_now[this_spike_index])}')
             else:
-                p_matrix, p_inv_matrix = update_p_matrix_and_inv(p_matrix, eta_vals_next[this_spike_index], zeta_values,
-                                                                 beta_vals_next[this_spike_index], p_inv_matrix,
+                p_matrix, p_inv_matrix = update_p_matrix_and_inv(p_matrix, eta_vals_now[this_spike_index], zeta_values,
+                                                                 beta_vals_now[this_spike_index], p_inv_matrix,
                                                                  window_mode, window_size)
             # print(f'checking the p product: {np.dot(p_matrix , p_inv_matrix)}')
             if window_mode:
@@ -253,7 +259,7 @@ def update_recons_coeffs(old_recons_coeffs, beta_values, kernel_residual_inner_p
 
 
 def update_p_matrix_and_inv(p_matrix, eta_values, zeta_values, beta_values, p_inv_old,
-                            window_mode=False, window_size=configuration.window_size, direct_invert=True,
+                            window_mode=False, window_size=configuration.window_size, direct_invert=False,
                             conditioning=False):
     """
     This method updates

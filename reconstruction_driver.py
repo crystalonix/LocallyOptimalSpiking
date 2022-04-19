@@ -66,7 +66,8 @@ def drive_select_snippet_reconstruction(signal_index, sample_length, norm_thresh
 
 def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length, norm_threshold=0.0,
                                                     need_reconstructed_signal=False, window_mode=False, window_size=-1,
-                                                    new_kernel_ip_threshold=0.001, z_threshold=0.5, rectify_coefficients=False,
+                                                    new_kernel_ip_threshold=0.001, z_threshold=0.5,
+                                                    rectify_coefficients=False,
                                                     show_z_vals=False, test_signal=None, selected_kernel_indexes=None):
     if test_signal is not None:
         snippet = test_signal
@@ -86,17 +87,17 @@ def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length,
 
 
 ahp = configuration.ahp_period / 1.0
-sample_numbers = [7]
+sample_numbers = [5]
 # [i for i in range(5, 10)]
-sample_number = 5
+sample_number = 6
 sample_len = 10000
 number_of_kernel = 2
 select_kernel_indexes = [0]
 signal_norm_thrs = 1e-4
 win_mode = False
 win_size = 30
-ip_thrs = 1e-8
-z_thrs = np.array([1e-4, 0.001]) * 1e-8  # 1e-8
+ip_thrs = 1e-12
+z_thrs = np.array([1e-2, 0.001]) * 1e-7  # 1e-8
 # z_thrs = np.array([0.0001, .001, .01, .1, 1.0]) * 1e-6
 win_sizes = [50
              # ,20, 30
@@ -178,10 +179,12 @@ if single_snippet:
             sample_number = sample_numbers[i]
             this_signal, sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, \
             recons, all_convs, z_vals, kernel_projections = \
-                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len, norm_threshold=signal_norm_thrs,
+                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len,
+                                                                norm_threshold=signal_norm_thrs,
                                                                 need_reconstructed_signal=True, window_mode=win_mode,
                                                                 window_size=win_size, new_kernel_ip_threshold=ip_thrs,
-                                                                rectify_coefficients=rectify_coeffs, show_z_vals=show_z_scores_plot,
+                                                                rectify_coefficients=rectify_coeffs,
+                                                                show_z_vals=show_z_scores_plot,
                                                                 z_threshold=z_thrs,
                                                                 selected_kernel_indexes=select_kernel_indexes)
             print(f'iterative recons error rate is: {error_rate_fast} and number of spike: {len(sp_indexes)}')
