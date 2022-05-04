@@ -66,7 +66,7 @@ def drive_select_snippet_reconstruction(signal_index, sample_length, norm_thresh
 
 def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length, norm_threshold=0.0,
                                                     need_reconstructed_signal=False, window_mode=False, window_size=-1,
-                                                    new_kernel_ip_threshold=0.001, z_threshold=0.5,
+                                                    new_kernel_norm_threshold=0.001, z_threshold=0.5,
                                                     rectify_coefficients=False,
                                                     show_z_vals=False, test_signal=None, selected_kernel_indexes=None):
     if test_signal is not None:
@@ -77,13 +77,13 @@ def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length,
         snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
     snippet = signal_utils.upsample(snippet)
     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction, \
-    all_convs, z_scores, kernel_projections = reconstruction_manager.drive_single_signal_reconstruction_iteratively(
+    all_convs, z_scores, kernel_projections, gamma_vals = reconstruction_manager.drive_single_signal_reconstruction_iteratively(
         snippet, False, need_reconstructed_signal=need_reconstructed_signal, window_mode=window_mode,
-        window_size=window_size, ip_threshold=new_kernel_ip_threshold, recompute_recons_coeff=rectify_coefficients,
+        window_size=window_size, norm_threshold=new_kernel_norm_threshold, recompute_recons_coeff=rectify_coefficients,
         show_z_vals=show_z_vals, z_threshold=z_threshold, signal_norm_sq=norm * norm,
         selected_kernel_indexes=selected_kernel_indexes)
     return snippet, spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, \
-           error_rate, reconstruction, all_convs, z_scores, kernel_projections
+           error_rate, reconstruction, all_convs, z_scores, kernel_projections, gamma_vals
 
 
 ahp = configuration.ahp_period / 1.0
@@ -96,8 +96,8 @@ select_kernel_indexes = [0]
 signal_norm_thrs = 1e-4
 win_mode = False
 win_size = 30
-ip_thrs = 1e-12
-z_thrs = np.array([1e-2, 0.001]) * 1e-7  # 1e-8
+norm_thres = 1e-3
+z_thrs = np.array([2e3, 0.001]) * 1e-7  # 1e-8
 # z_thrs = np.array([0.0001, .001, .01, .1, 1.0]) * 1e-6
 win_sizes = [50
              # ,20, 30
@@ -155,14 +155,14 @@ if not single_snippet:
         i = i + 1
         for i_th in ip_thresholds[i]:
             print(f'running for window size:{w} and threshold:{i_th}')
-            _, sp_times, _, _, _, error_rate_fast_itr, recons_itr, all_convs, z_scores, kernel_projections = \
-                drive_select_snippet_reconstruction_iteratively(sample_number, sample_len,
-                                                                norm_threshold=signal_norm_thrs,
-                                                                need_reconstructed_signal=True, window_mode=win_mode,
-                                                                window_size=w, new_kernel_ip_threshold=i_th,
-                                                                rectify_coefficients=rectify_coeffs,
-                                                                show_z_vals=show_z_scores_plot,
-                                                                z_threshold=z_thrs)
+            _, sp_times, _, _, _, error_rate_fast_itr, recons_itr, all_convs, z_scores, kernel_projections, gamma_vals \
+                = drive_select_snippet_reconstruction_iteratively(sample_number, sample_len,
+                                                                  norm_threshold=signal_norm_thrs,
+                                                                  need_reconstructed_signal=True, window_mode=win_mode,
+                                                                  window_size=w, new_kernel_norm_threshold=i_th,
+                                                                  rectify_coefficients=rectify_coeffs,
+                                                                  show_z_vals=show_z_scores_plot,
+                                                                  z_threshold=z_thrs)
             tmp.append(error_rate_fast_itr)
             sp_tmp.append(len(sp_times))
 
@@ -178,11 +178,12 @@ if single_snippet:
         for i in range(len(sample_numbers)):
             sample_number = sample_numbers[i]
             this_signal, sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, \
-            recons, all_convs, z_vals, kernel_projections = \
+            recons, all_convs, z_vals, kernel_projections, gamma_vals = \
                 drive_select_snippet_reconstruction_iteratively(sample_number, sample_len,
                                                                 norm_threshold=signal_norm_thrs,
                                                                 need_reconstructed_signal=True, window_mode=win_mode,
-                                                                window_size=win_size, new_kernel_ip_threshold=ip_thrs,
+                                                                window_size=win_size,
+                                                                new_kernel_norm_threshold=norm_thres,
                                                                 rectify_coefficients=rectify_coeffs,
                                                                 show_z_vals=show_z_scores_plot,
                                                                 z_threshold=z_thrs,
@@ -222,7 +223,7 @@ if single_snippet:
     if show_z_scores_plot:
         for this_index in select_kernel_indexes:
             plot_utils.plot_kernel_spike_profile(sp_times[sp_indexes == this_index], all_convs[this_index],
-                                                 z_vals[this_index], kernel_projections[this_index],
+                                                 z_vals[this_index], kernel_projections[this_index], gamma_vals[this_index],
                                                  club_z_score_threshold=club_z_score_with_proj_thrs,
                                                  kernel_index=this_index)
 

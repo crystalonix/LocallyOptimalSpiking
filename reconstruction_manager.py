@@ -191,7 +191,7 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
                                                    kernel_frequencies=None,
                                                    need_error_rate_fast=True, need_error_rate_accurate=False,
                                                    need_reconstructed_signal=False, computation_mode=configuration.mode,
-                                                   window_mode=False, window_size=-1, ip_threshold=0.01,
+                                                   window_mode=False, window_size=-1, norm_threshold=0.01,
                                                    z_threshold=0.5, recompute_recons_coeff=True, show_z_vals=False,
                                                    signal_norm_sq=None, selected_kernel_indexes=None):
     """
@@ -201,7 +201,7 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     :param z_threshold:
     :param show_z_vals:
     :param recompute_recons_coeff:
-    :param ip_threshold: threshold for inner product of the new spike in the current span
+    :param norm_threshold: threshold for inner product of the new spike in the current span
     :param computation_mode:
     :param window_size:
     :param window_mode:
@@ -217,9 +217,10 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     if init_kernel:
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
-    sp_times, sp_indexes, thrs_values, recons_coeffs, z_scores, kernel_projections = iterative_spike_generator. \
+    sp_times, sp_indexes, thrs_values, recons_coeffs, z_scores, kernel_projections, gamma_vals = \
+        iterative_spike_generator. \
         spike_and_reconstruct_iteratively(signal_kernel_convolutions, window_mode=window_mode, window_size=window_size,
-                                          norm_threshold_for_new_spike=ip_threshold, z_thresholds=z_threshold,
+                                          norm_threshold_for_new_spike=norm_threshold, z_thresholds=z_threshold,
                                           show_z_scores=show_z_vals, signal_norm_square=signal_norm_sq,
                                           selected_kernel_indexes=selected_kernel_indexes)
     if recompute_recons_coeff:
@@ -233,7 +234,7 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     if need_reconstructed_signal:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
     return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, \
-           signal_kernel_convolutions, z_scores, kernel_projections
+           signal_kernel_convolutions, z_scores, kernel_projections, gamma_vals
 
 # # configuration.upsample_factor = 10
 # # configuration.ahp_period = 100.0 * configuration.upsample_factor

@@ -158,11 +158,12 @@ def plot_multiple_spike_trains(spike_times, spike_indexes, num_cols=1, plot_titl
     plt.show()
 
 
-def plot_kernel_spike_profile(spike_times, conv_values, z_scores, kernel_projection, kernel_index, plot_titles=None,
-                              width=400, club_z_score_threshold=False,
+def plot_kernel_spike_profile(spike_times, conv_values, z_scores, kernel_projection, gamma_vals, kernel_index,
+                              plot_titles=None, width=400, club_z_score_threshold=False,
                               xranges=None, colors=None, x_labels=None, y_labels=None, x_ticks_on=True):
     """
     Plots a list of funcs arranged in a grid
+    :param gamma_vals:
     :param club_z_score_threshold:
     :param kernel_projection:
     :param width:
@@ -178,17 +179,21 @@ def plot_kernel_spike_profile(spike_times, conv_values, z_scores, kernel_project
     :param y_labels:
     """
     line_width = 1.0
-    n = 4 if not club_z_score_threshold else 3
-    k = 3 if not club_z_score_threshold else 1
+    n = 4+1 if not club_z_score_threshold else 3+1
+    k = 3+1 if not club_z_score_threshold else 1
     fig, axs = plt.subplots(n)
     fig.suptitle(f'spike profile for {kernel_index}-th kernel generating total {len(spike_times)} spikes')
     axs[0].plot(conv_values, linewidth=line_width)
     axs[0].set_title('signal kernel convolution')
+
     axs[1].plot(np.array(z_scores) / (1.0 if not club_z_score_threshold else np.max(z_scores)), linewidth=line_width)
     axs[1].set_title('z-score value for the sliding kernel')
     spike_heights = [1.0 for i in range(len(spike_times))]
     axs[2].bar(spike_times, spike_heights, width=width)
     axs[2].set_title(f'bar plot of spike times for the {kernel_index}-th kernel')
+
+    axs[3].plot(gamma_vals, linewidth=line_width)
+    axs[3].set_title('gamma values for the sliding kernel')
     print(f'check the vals: kernel projection max{np.max(kernel_projection)} '
           f'and max z_score:{np.max(z_scores)} and type: {type(kernel_projection)}')
     axs[k].plot(kernel_projection, linewidth=line_width)
@@ -198,10 +203,12 @@ def plot_kernel_spike_profile(spike_times, conv_values, z_scores, kernel_project
         axs[0].set_title(plot_titles[0])
         axs[1].set_title(plot_titles[1])
         axs[2].set_title(plot_titles[2])
+        axs[3].set_title(plot_titles[3])
     if not x_ticks_on:
         axs[0].set_xticks([])
         axs[1].set_xticks([])
         axs[2].set_xticks([])
+        axs[3].set_xticks([])
     # plt.show()
 
 
