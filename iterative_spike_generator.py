@@ -5,6 +5,8 @@ import configuration
 import time
 import configuration
 import plot_utils
+import reconstruction_manager
+import signal_utils
 
 
 def update_c_matrix(c_matrix, eta_values, zeta, beta_values, window_mode=False, window_size=10):
@@ -41,10 +43,14 @@ def calculate_gamma_2(eta_next, recons_coeffs):
     return np.dot(eta_next, recons_coeffs)
 
 
+def calculate_gamma_manual(recons_signal, current_time, kernel_index):
+    return 0
+
+
 def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, window_size=-1,
                                       norm_threshold_for_new_spike=0.1, z_thresholds=0.5, show_z_scores=False,
                                       signal_norm_square=None, selected_kernel_indexes=None,
-                                      preconditioning=configuration.precondition_mode):
+                                      preconditioning=configuration.precondition_mode, input_signal=None):
     p_matrix = []
     p_inv_matrix = []
     c_matrix = []
@@ -58,18 +64,38 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
     beta_vals_next = [None for i in range(len(all_convolutions))]
     z_scores = [None for i in range(len(all_convolutions))]
     gamma_vals = [None for i in range(len(all_convolutions))]
+    gamma_vals_conv = [None for i in range(len(all_convolutions))]
+    gamma_vals_manual = [None for i in range(len(all_convolutions))]
     kernel_projections = [None for i in range(len(all_convolutions))]
     threshold_values = np.array([], dtype=float)
     recons_coeffs = np.array([], dtype=float)
     spike_times = np.array([], dtype=int)
     spike_indexes = np.array([], dtype=int)
+    recons_signal = []
+    last_spike_time = -1
+    # TODO: To be used only in testing mode
+    z_numerator = [None for i in range(len(all_convolutions))]
+    x_residual_signal = input_signal
 
     # zeta_values will stores the perpendicular norm of the new spike kernels
     zeta_values = np.array([], dtype=float)
     spike_counter = 0
     residual_norm_square = signal_norm_square
     spike_counts = np.zeros(len(all_convolutions))
+
+    ##########################################################
+    ############### do some preprocessing here ###############
+    ##########################################################
+    if configuration.debug:
+        recons_signal = np.zeros(len(input_signal))
+        for i in range(len(all_convolutions)):
+            if selected_kernel_indexes is not None and i not in selected_kernel_indexes:
+                continue
+            gamma_vals_conv[i] = signal_utils.calculate_convolution(kernel_manager.all_kernels[i], recons_signal)
+
     for t in range(len(all_convolutions[0]) - 1):
+        if t == 73558:
+            print(f'visited')
         z_max_this = -1
         this_spike_index = -1
         for i in range(len(all_convolutions)):
@@ -83,11 +109,15 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                                                  threshold_values, window_mode)
                 if configuration.debug:
                     gamma = calculate_gamma_1(beta_next, threshold_values)
+                    gamma_manual = gamma_vals_conv[i][t + 1]
+                    # calculate_gamma_manual(recons_signal, t + 1, i)
                     # gamma = calculate_gamma_2(eta_next, recons_coeffs)
                     if gamma_vals[i] is None:
                         gamma_vals[i] = [gamma]
+                        gamma_vals_manual[i] = [gamma_manual]
                     else:
                         gamma_vals[i].append(gamma)
+                        gamma_vals_manual[i].append(gamma_manual)
                 z_next = x_r_next ** 2
                 new_spike_norm_sq = 1 - np.dot(eta_next, beta_next)
                 z_next = z_next / new_spike_norm_sq
@@ -104,11 +134,10 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                     else:
                         z_scores[i].append(z_next)
                         kernel_projections[i].append(new_spike_norm_sq)
-
-                # TODO: uncomment this when the exploding condition number problem is solved
-
-                # assert z_next >= 0
-                if configuration.debug:
+                assert z_next >= 0
+                if z_next < 0:
+                    print('gotcha')
+                if configuration.verbose:
                     print(f'time for eta and beta computation is: {time.process_time() - st}')
                 #######################################################################
                 ########### adds only one spike at a time on a local maxima ###########
@@ -116,7 +145,8 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                 zeta_val_at_t = kernel_projections[i][len(kernel_projections[i]) - 2]
 
                 if zeta_val_at_t > norm_threshold_for_new_spike and t > 1 and z_next < z_vals_next[i] \
-                        and z_vals_next[i] > z_vals_now[i] and z_max_this < z_vals_next[i]:
+                        and z_vals_next[i] > z_vals_now[i] and z_max_this < z_vals_next[i] \
+                        and t > last_spike_time + 1:
                     if window_mode or z_vals_next[i] > z_thresholds[i]:
                         this_spike_index = i
                         this_threshold = all_convolutions[i][t]
@@ -137,15 +167,17 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
         ########### add the spike and spike index here ###########
         ##########################################################
         if this_spike_index > -1:
-            print(f'producing spike #{len(spike_times) + 1}')
+            print(f'producing spike #{len(spike_times) + 1} at time {t} out of {len(all_convolutions[0])}')
             ##########################################################
             ######## TODO: if window mode compress this part #########
+            ##########################################################
             spike_times = np.append(spike_times, t)
             spike_indexes = np.append(spike_indexes, this_spike_index)
             threshold_values = np.append(threshold_values, this_threshold)
             zeta_values = np.append(zeta_values, np.sqrt(zeta_val_at_t))
             spike_counter = spike_counter + 1
             spike_counts[this_spike_index] += 1
+            last_spike_time = t
 
             if configuration.verbose:
                 if len(spike_times) % 2 == 0 and not preconditioning:
@@ -183,6 +215,8 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                 #       )
                 print(f'norm of beta values is: {np.linalg.norm(beta_vals_now[this_spike_index])}')
             else:
+                if len(p_matrix) != 0 and len(eta_vals_now[this_spike_index]) != p_matrix.shape[0]:
+                    print('Unusual')
                 p_matrix, p_inv_matrix = update_p_matrix_and_inv(p_matrix, eta_vals_now[this_spike_index],
                                                                  beta_vals_now[this_spike_index], p_inv_matrix,
                                                                  window_mode, window_size)
@@ -198,8 +232,23 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                 print(f'the residual square is: {residual_norm_square}')
                 if configuration.debug:
                     print(f'time to calculate p_inverse: {time.process_time() - st}')
+            if configuration.debug:
+                recons_signal = reconstruction_manager.get_reconstructed_signal(len(input_signal), spike_times,
+                                                                                spike_indexes, recons_coeffs)
+                x_residual_signal = input_signal - recons_signal
+                for i in range(len(all_convolutions)):
+                    if selected_kernel_indexes is not None and i not in selected_kernel_indexes:
+                        continue
+                    gamma_vals_conv[i] = signal_utils.calculate_convolution(kernel_manager.all_kernels[i],
+                                                                            recons_signal)
     print(f'spike counts: {spike_counts}')
-    return spike_times, spike_indexes, threshold_values, recons_coeffs, z_scores, kernel_projections, gamma_vals
+    ########### Do any post processing check if needed ##################
+    # for i in range(len(all_convolutions)):
+    #     if selected_kernel_indexes is not None and i not in selected_kernel_indexes:
+    #         continue
+    #     gamma_vals_conv[i] = signal_utils.calculate_convolution(kernel_manager.all_kernels[i], recons_signal)
+    return spike_times, spike_indexes, threshold_values, recons_coeffs, z_scores, \
+           kernel_projections, gamma_vals, recons_signal, gamma_vals_manual
 
 
 def calculate_beta(p_inv_matrix, eta):
@@ -297,6 +346,8 @@ def update_p_matrix_and_inv(p_matrix, eta_values, beta_values, p_inv_old,
     if len(p_matrix) == 0:
         p_new = np.array([[1.0]])
         return p_new, p_new.copy()
+    if len(eta_values) != p_matrix.shape[0]:
+        print('Unusual')
     assert p_matrix.shape[0] == len(eta_values)
     eta_values_new = eta_values.copy()
     last_element = 1.0

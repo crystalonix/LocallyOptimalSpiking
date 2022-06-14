@@ -10,10 +10,11 @@ sampling_rate = actual_sampling_rate * upsample_factor
 precondition_mode = False
 z_score_by_residual_norm = True
 direct_invert_p = True
+testing = True
 
 number_of_threads = 10
-verbose = True
-debug = True
+verbose = False
+debug = False
 mode = "expanded"
 window_size = 10
 # 'compressed'

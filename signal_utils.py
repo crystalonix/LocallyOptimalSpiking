@@ -73,3 +73,11 @@ def add_shifted_comp_signals(comp_signal, shifts, coefficients=None):
         coefficients = np.ones(len(shifts))
     print(f'check the shapes here: {components_matrix.shape} & {coefficients.shape}')
     return np.matmul(components_matrix, coefficients)
+
+
+def zero_pad(this_snippet, zero_pad_len, both_sides):
+    total_len = len(this_snippet) + zero_pad_len
+    total_len = total_len + zero_pad_len if both_sides else total_len
+    zero_pad_signal = np.zeros(total_len)
+    zero_pad_signal[zero_pad_len:zero_pad_len+len(this_snippet)] = this_snippet
+    return zero_pad_signal
