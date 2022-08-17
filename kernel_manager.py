@@ -114,7 +114,8 @@ def calculate_row_of_kernel_ips(index1, time_deltas, spike_indexes):
                 component_shifts[spike_indexes[i]][j])) for j in range(num_comps)] for i in range(len(time_deltas))])
     all_positions = np.array([[initial_positions[n] - int(component_shifts[index1][1] * i)
                                for i in range(num_comps)] for n in range(len(time_deltas))])
-    all_positions[(all_positions <= 0) | (all_positions >= len(bspline_inner_products[index1][index2]))] = 0
+    # TODO: 0 instead of index2 needs to replaced if bspline mode is enabled
+    all_positions[(all_positions <= 0) | (all_positions >= len(bspline_inner_products[index1][0]))] = 0
     all_positions = np.ravel(all_positions)
     all_ips = np.zeros_like(all_positions, dtype=float)
     # if configuration.verbose:
