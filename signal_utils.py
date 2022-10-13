@@ -3,7 +3,7 @@ import common_utils
 import configuration
 
 
-def upsample(signal, up_factor=configuration.upsample_factor, interpolation_fn=common_utils.linear_interpolation):
+def up_sample(signal, up_factor=configuration.upsample_factor, interpolation_fn=common_utils.linear_interpolation):
     """
     upsamples a given signal by up_factor
     :param signal:
@@ -11,13 +11,17 @@ def upsample(signal, up_factor=configuration.upsample_factor, interpolation_fn=c
     :param interpolation_fn: given two end points interpolates the signal in between
     """
     sig_len = signal.size
-    up_signal = np.zeros(sig_len * up_factor + 1)
+    up_signal = np.zeros((sig_len - 1) * up_factor + 1)
 
     for i in range(sig_len - 1):
         up_signal[i * up_factor: (i + 1) * up_factor] = interpolation_fn(signal[i], signal[i + 1], up_factor)
 
     up_signal[-1] = signal[-1]
     return up_signal
+
+
+def down_sample(signal, up_factor=configuration.upsample_factor):
+    return signal[::up_factor]
 
 
 def calculate_convolution(f1, f2, samp_rate=configuration.sampling_rate):
@@ -79,5 +83,16 @@ def zero_pad(this_snippet, zero_pad_len, both_sides):
     total_len = len(this_snippet) + zero_pad_len
     total_len = total_len + zero_pad_len if both_sides else total_len
     zero_pad_signal = np.zeros(total_len)
-    zero_pad_signal[zero_pad_len:zero_pad_len+len(this_snippet)] = this_snippet
+    zero_pad_signal[zero_pad_len:zero_pad_len + len(this_snippet)] = this_snippet
     return zero_pad_signal
+
+
+def calculate_absolute_error_rate(signal, reconstruction):
+    """
+    returns noise to signal ratio in squared norm{
+    :param signal:
+    :param reconstruction:
+    :return:
+    """
+    error_signal = signal - reconstruction
+    return (np.linalg.norm(error_signal) / np.linalg.norm(signal)) ** 2

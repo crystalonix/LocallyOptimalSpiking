@@ -1,19 +1,19 @@
-import configuration
-import numpy as np
-import reconstruction_manager
-import reconstruction_driver
-import plot_utils
 import matplotlib.pyplot as plt
-import kernel_manager
-import signal_utils
-import reconstruction_manager
+import numpy as np
+
+import configuration
 import iterative_spike_generator
+import kernel_manager
+import plot_utils
+import reconstruction_driver
+import reconstruction_manager
+import signal_utils
 
 ################################################
 ##### This is created to do slim testings ######
 ################################################
 ahp = configuration.ahp_period / 1.0
-sample_number = 666
+sample_number = 29
 sample_len = 10000
 number_of_kernel = 10
 signal_norm_thrs = 1e-4
@@ -22,7 +22,7 @@ win_mode = True
 select_kernel_indexes = [i for i in range(number_of_kernel)]
 win_size = 10
 kernel_norm_thres = 1e-2
-z_thrs = np.array([1e3 for i in range(number_of_kernel)]) * 1e-11  # 1e-8
+z_thrs = np.array([1e3 for i in range(number_of_kernel)]) * 1e-12  # 1e-8
 # np.array([1e3, 1e3]) * 1e-8\
 
 # z_thrs = np.array([0.0001, .001, .01, .1, 1.0]) * 1e-6
@@ -37,6 +37,7 @@ show_z_scores_plot = True
 club_z_score_with_proj_thrs = False
 
 single_snippet_run = True
+show_signal_and_recons = False
 if single_snippet_run:
     kernel_manager.init(number_of_kernel)
 
@@ -44,7 +45,7 @@ if single_snippet_run:
         get_first_snippet_above_threshold_norm(sample_number, sample_len, signal_norm_thrs)
 
     # this_snippet = signal_utils.zero_pad(this_snippet, zero_pad_len=len(this_snippet), both_sides=True)
-    this_snippet = signal_utils.upsample(this_snippet)
+    this_snippet = signal_utils.up_sample(this_snippet)
     # plot_utils.plot_function(this_snippet, title='padded signal')
     if iterative_recons:
         sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, \
@@ -55,7 +56,8 @@ if single_snippet_run:
                 recompute_recons_coeff=True,
                 show_z_vals=True, z_threshold=z_thrs, signal_norm_sq=norm * norm,
                 selected_kernel_indexes=select_kernel_indexes, input_signal=this_snippet)
-        plot_utils.plot_functions([this_snippet, recons], plot_titles=['original signal', 'reconstruction'])
+        if show_signal_and_recons:
+            plot_utils.plot_functions([this_snippet, recons], plot_titles=['original signal', 'reconstruction'])
         print(f' fast error rate of reconstruction is: {error_rate_fast} with {len(sp_times)} spikes'
               f', kernel norm threshold {kernel_norm_thres} and z-threshold {z_thrs[0]} for signal index: {sample_number}'
               f'window size: {win_size}')
@@ -66,39 +68,40 @@ if single_snippet_run:
                                                                        norm_threshold=signal_norm_thrs,
                                                                        need_reconstructed_signal=True, ahp_period=ahp,
                                                                        selected_kernel_indexes=select_kernel_indexes)
-    for this_index in select_kernel_indexes:
-        plot_utils.plot_kernel_spike_profile(sp_times[sp_indexes == this_index], signal_kernel_convolutions[this_index],
-                                             z_scores[this_index], kernel_projections[this_index],
-                                             # other_fns=[gamma_vals[this_index],
-                                             # gamma_vals[this_index] - signal_kernel_convolutions[this_index][
-                                             #                                     :len(gamma_vals[this_index])],
-                                             #            this_snippet, recons_signal,
-                                             #            np.array(gamma_vals_manual[this_index]) - gamma_vals[this_index]
-                                             #            # signal_kernel_convolutions[this_index][:len(gamma_vals[this_index])]
-                                             #            ],
-                                             # other_titles=['gamma vals', 'gamma minus conv',
-                                             # 'input signal', 'reconstructed signal',
-                                             #               'gamma minus gamma manual'],
-                                             club_z_score_threshold=club_z_score_with_proj_thrs,
-                                             kernel_index=this_index)
+    if show_signal_and_recons:
+        for this_index in select_kernel_indexes:
+            plot_utils.plot_kernel_spike_profile(sp_times[sp_indexes == this_index], signal_kernel_convolutions[this_index],
+                                                 z_scores[this_index], kernel_projections[this_index],
+                                                 # other_fns=[gamma_vals[this_index],
+                                                 # gamma_vals[this_index] - signal_kernel_convolutions[this_index][
+                                                 #                                     :len(gamma_vals[this_index])],
+                                                 #            this_snippet, recons_signal,
+                                                 #            np.array(gamma_vals_manual[this_index]) - gamma_vals[this_index]
+                                                 #            # signal_kernel_convolutions[this_index][:len(gamma_vals[this_index])]
+                                                 #            ],
+                                                 # other_titles=['gamma vals', 'gamma minus conv',
+                                                 # 'input signal', 'reconstructed signal',
+                                                 #               'gamma minus gamma manual'],
+                                                 club_z_score_threshold=club_z_score_with_proj_thrs,
+                                                 kernel_index=this_index)
         plt.show()
 else:
     ################### run signals over a grid of param values instead of a single run #######################
-    sample_len = 20000
+    sample_len = 10000
     number_of_kernel = 10
     signal_norm_thrs = 1e-4
     win_mode = True
-    start = 10
+    start = 5
     end = 100
     sample_numbers = np.array([i for i in range(start, end)])
     select_kernel_indexes = [i for i in range(number_of_kernel)]
     # [2, 3, 4, 5, 6, 7, 8, 9]
     win_sizes = [10]
     # [50, 30, 25, 20, 15, 10]
-    kernel_norm_thresholds = np.array([1e-1])
+    kernel_norm_thresholds = np.array([1e-2])
     z_thrs_base = np.array([1e3 for i in range(number_of_kernel)])
     # np.array([1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3])  # 1e-8
-    z_thres_multiplier = np.array([1e-9, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-17])
+    z_thres_multiplier = np.array([1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-17])
     # np.array([1e-9, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-17])
     need_reconstructed_signal = False
     all_values_to_report = []
@@ -109,7 +112,7 @@ else:
         for s in sample_numbers:
             this_snippet, norm, _, _, _ = reconstruction_driver. \
                 get_first_snippet_above_threshold_norm(s, sample_len, signal_norm_thrs)
-            this_snippet = signal_utils.upsample(this_snippet)
+            this_snippet = signal_utils.up_sample(this_snippet)
             signal_norm_square, signal_kernel_convolutions = \
                 reconstruction_manager.init_signal(this_snippet, configuration.mode)
             for w in win_sizes:

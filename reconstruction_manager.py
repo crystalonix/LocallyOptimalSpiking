@@ -8,6 +8,8 @@ import iterative_spike_generator
 import kernel_manager
 import signal_utils
 import spike_generator
+import plot_utils
+import math
 
 
 def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
@@ -19,14 +21,17 @@ def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
     return all_convolutions
 
 
-def init_signal(signal, mode=configuration.mode):
+def init_signal(signal, mode=configuration.mode, need_norm=True):
     """
     Initialize the necessary global data structures for the given signal
+    :param need_norm:
     :param mode:
     :return:
     :param signal:
     """
-    signal_norm_square = signal_utils.get_signal_norm_square(signal)
+    signal_norm_square = -1
+    if need_norm:
+        signal_norm_square = signal_utils.get_signal_norm_square(signal)
     signal_kernel_convolutions = calculate_signal_kernel_convs(signal, mode)
     return signal_norm_square, signal_kernel_convolutions  # , signal_kernel_bspline_convolutions
 
@@ -46,7 +51,7 @@ def calculate_signal_kernel_convs(signal, mode=configuration.mode):
             all_convolutions.append(signal_utils.add_shifted_comp_signals(
                 signal_utils.calculate_convolution(kernel_manager.kernels_component_bsplines[i], signal),
                 kernel_manager.component_shifts[i], kernel_manager.kernels_bspline_coefficients[i]))
-        print(f'size of all convs {len(all_convolutions)}')
+        # print(f'size of all convs {len(all_convolutions)}')
     return all_convolutions
 
 
@@ -60,6 +65,92 @@ def calculate_reconstruction(spike_times, spike_indexes, threshold_crossing_valu
     # reconstruction_coefficients = np.dot(p_inv, threshold_crossing_values)
     reconstruction_coefficients = common_utils.solve_for_coefficients(p_matrix, threshold_crossing_values).numpy()
     return reconstruction_coefficients
+
+
+# TODO: make sure spikes are in sorted order in this
+def calculate_reconstruction_in_window_mode(spike_times, spike_indexes, threshold_crossing_values,
+                                            winddow_size=configuration.window_size):
+    """
+    Once spike times are computed this method computes the reconstruction coefficients
+    """
+    step_len = 1000
+    recons_coeffs = np.zeros(len(spike_times))
+    p_matrix = calculate_p_matrix(spike_times[: winddow_size], spike_indexes[: winddow_size])
+    recons_coeffs[:min(winddow_size, len(spike_times))] = np.squeeze(
+        common_utils.solve_for_coefficients(p_matrix,
+                                            threshold_crossing_values[:min(winddow_size, len(spike_times))]).numpy())
+    for i in range(winddow_size, len(spike_times)):
+        # eta_vals = calculate_eta(spike_times[:i], spike_indexes[:i], spike_times[i], spike_indexes[i], True,
+        #                          winddow_size - 1)
+        all_eta_vals = calculate_eta(spike_times[:i], spike_indexes[:i], spike_times[i], spike_indexes[i], False)
+        eta_vals = all_eta_vals[-winddow_size + 1:]
+        p_matrix = update_windowed_p_matrix(p_matrix, eta_vals, winddow_size)
+        t_values = np.zeros(winddow_size)
+        t_values[-1] = \
+            threshold_crossing_values[i] - \
+            np.dot(recons_coeffs[:i], all_eta_vals)
+        # np.dot(recons_coeffs[max(i - winddow_size+1, 0):i], eta_vals)
+        coeffs = common_utils.solve_for_coefficients(p_matrix, t_values).numpy()
+        recons_coeffs[max(i + 1 - winddow_size, 0):i + 1] = recons_coeffs[max(i + 1 - winddow_size, 0):i + 1] \
+                                                            + np.squeeze(coeffs)
+        if configuration.debug and i % step_len == 0:
+            recons = get_reconstructed_signal(spike_times[i], spike_times[:i + 1], spike_indexes[:i + 1], recons_coeffs)
+            plot_utils.plot_function(recons)
+            # absolute_error_rate = signal_utils.calculate_absolute_error_rate(signal, recons)
+            # print(f'absolute error rate: {absolute_error_rate}')
+        # TODO: add error calculation here
+    return recons_coeffs
+
+
+# TODO: move this to a separate file
+def calculate_eta(spike_times, spike_indexes, current_time, current_index, window_mode=False, window_size=-1):
+    """
+    This method returns the array of inner product values of
+    the current kernel with rest of spike generating kernels
+    :param window_size: the maximum number of recent spikes to be considered
+    :param window_mode: if the window mode is "True" only a limited set of spikes will be considered for
+    calculating the inner products
+    :param spike_times: timing of all spikes
+    :param spike_indexes: indexes of the spiking kernels
+    :param current_time: present time
+    :param current_index: index of kernel in consideration
+    :return: vector of inner products
+    """
+
+    if len(spike_times) == 0:
+        return []
+    n = min(window_size, len(spike_indexes)) if window_mode else len(spike_indexes)
+    eta_values = np.zeros(n)
+    for i in range(n):
+        this_index = len(spike_indexes) - n + i
+        eta_values[i] = kernel_manager. \
+            get_kernel_kernel_inner_prod(spike_indexes[this_index], current_index,
+                                         current_time - spike_times[this_index])
+    return eta_values
+
+
+# TODO: move this to a common place
+def update_windowed_p_matrix(p_matrix, eta_values, window_size=configuration.window_size):
+    """
+    This method updates
+    :param window_size:
+    :rtype: return the updated p_matrix and its inverse
+    :param p_matrix:
+    :param eta_values:
+    """
+    if len(p_matrix) == 0:
+        p_new = np.array([[1.0]])
+        return p_new
+    # if len(eta_values) != p_matrix.shape[0]:
+    #     raise ValueError('P matrix and eta value sizes did not match')
+    # assert p_matrix.shape[0] == len(eta_values)
+    # TODO: check if this deep copy is needed
+    eta_values_new = eta_values.copy()
+    p_new = p_matrix[-min(window_size - 1, len(eta_values)):, -min(window_size - 1, len(eta_values)):]
+    p_new = np.hstack((p_new, eta_values_new.reshape(-1, 1)))
+    # the last element in the matrix is always 1.0
+    p_new = np.vstack((p_new, np.append(eta_values_new, 1.0)))
+    return p_new
 
 
 def calculate_p_matrix(spike_times, spike_indexes, mode=configuration.mode):
@@ -88,9 +179,18 @@ def calculate_p_matrix(spike_times, spike_indexes, mode=configuration.mode):
 
 
 def calculate_spike_times_and_reconstruct(signal_kernel_convs, reconstruction=True,
-                                          ahp_period=configuration.ahp_period, selected_kernel_indexes=None):
+                                          ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value
+                                          , selected_kernel_indexes=None,
+                                          spiking_threshold=configuration.spiking_threshold,
+                                          max_spike_count=configuration.max_spike_count, window_mode=True,
+                                          window_size=configuration.window_size):
     """
     This method calculates the spike times and calculates the reconstruction coefficients
+    :param window_size:
+    :param window_mode:
+    :param max_spike_count:
+    :param ahp_high:
+    :param spiking_threshold:
     :param selected_kernel_indexes:
     :param ahp_period:
     :param signal_kernel_convs:
@@ -98,13 +198,17 @@ def calculate_spike_times_and_reconstruct(signal_kernel_convs, reconstruction=Tr
     :return:
     """
     spike_times, spike_indexes, threshold_values = spike_generator. \
-        calculate_spike_times(signal_kernel_convs, ahp_period=ahp_period,
-                              selected_kernel_indexes=selected_kernel_indexes)
-    if len(spike_times) == 0:
+        calculate_spike_times(signal_kernel_convs, ahp_period=ahp_period, ahp_high=ahp_high,
+                              selected_kernel_indexes=selected_kernel_indexes, threshold=spiking_threshold)
+    if len(spike_times) == 0 or len(spike_times) > max_spike_count:
         return spike_times, spike_indexes, None, None
     recons_coeffs = None
     if reconstruction:
-        recons_coeffs = calculate_reconstruction(spike_times, spike_indexes, threshold_values)
+        if window_mode:
+            recons_coeffs = calculate_reconstruction_in_window_mode(spike_times, spike_indexes,
+                                                                    threshold_values, winddow_size=window_size)
+        else:
+            recons_coeffs = calculate_reconstruction(spike_times, spike_indexes, threshold_values)
     return spike_times, spike_indexes, threshold_values, recons_coeffs
 
 
@@ -151,9 +255,20 @@ def calculate_reconstruction_error_rate_fast(reconstruction_coefficients, thresh
 def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kernels=-1, kernel_frequencies=None,
                                        need_error_rate_fast=True, need_error_rate_accurate=False,
                                        need_reconstructed_signal=False, computation_mode=configuration.mode,
-                                       ahp_period=configuration.ahp_period, selected_kernel_indexes=None):
+                                       ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value,
+                                       selected_kernel_indexes=None,
+                                       spiking_threshold=configuration.spiking_threshold, signal_norm_square=None,
+                                       signal_kernel_convolutions=None, max_spike_count=configuration.max_spike_count,
+                                       window_mode=True, window_size=configuration.window_size):
     """
 
+    :param window_size:
+    :param window_mode:
+    :param max_spike_count:
+    :param ahp_high:
+    :param signal_norm_square:
+    :param signal_kernel_convolutions:
+    :param spiking_threshold:
     :param selected_kernel_indexes:
     :param ahp_period:
     :param computation_mode:
@@ -168,19 +283,117 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
     """
     if init_kernel:
         kernel_manager.init(number_of_kernels, kernel_frequencies)
-    signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
+    if signal_kernel_convolutions is None:
+        signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
     sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
-        signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period,
-        selected_kernel_indexes=selected_kernel_indexes)
+        signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period, ahp_high=ahp_high,
+        selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
+        max_spike_count=max_spike_count, window_mode=window_mode, window_size=window_size)
     recons = None
-    error_rate_fast = None
     if need_error_rate_accurate:
         pass
-    if need_error_rate_fast:
+    if need_error_rate_fast and recons_coeffs is not None:
         error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, thrs_values, signal_norm_square)
-    if need_reconstructed_signal:
+    else:
+        error_rate_fast = -1
+    if need_reconstructed_signal and recons_coeffs is not None:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
+        absolute_error_rate = signal_utils.calculate_absolute_error_rate(signal, recons)
+        print(f'absolute error rate: {absolute_error_rate}')
     return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons
+
+
+def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_kernels=-1, kernel_frequencies=None,
+                                          need_error_rate_fast=True, need_error_rate_accurate=False,
+                                          need_reconstructed_signal=False, computation_mode=configuration.mode,
+                                          ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value,
+                                          selected_kernel_indexes=None,
+                                          spiking_threshold=configuration.spiking_threshold,
+                                          max_spike_count=configuration.max_spike_count,
+                                          window_size=configuration.window_size,
+                                          snippet_len=configuration.snippet_length,
+                                          overlap_len=configuration.signal_interleaving_length):
+    """
+    This method is invoked to reconstruct a signal which large enough
+    so that it can't fit entirely in memory for processing
+    :param overlap_len:
+    :param signal:
+    :param init_kernel:
+    :param number_of_kernels:
+    :param kernel_frequencies:
+    :param need_error_rate_fast:
+    :param need_error_rate_accurate:
+    :param need_reconstructed_signal:
+    :param computation_mode:
+    :param ahp_period:
+    :param ahp_high:
+    :param selected_kernel_indexes:
+    :param spiking_threshold:
+    :param max_spike_count:
+    :param window_size:
+    :param snippet_len:
+    :return:
+    """
+    if init_kernel:
+        kernel_manager.init(number_of_kernels, kernel_frequencies)
+    total_len = len(signal)
+    all_spikes = []
+    all_spike_indexes = []
+    all_thresholds = []
+    total_signal_norm_square = 0
+    each_kernel_spikes = [[] for i in range(number_of_kernels)]
+    start_time = time.process_time()
+    for i in range(math.ceil(total_len / snippet_len)):
+        snippet_begin_time = max(i * snippet_len - overlap_len, 0)
+        snippet_end_time = min(len(signal), (i + 1) * snippet_len)
+        snippet = signal[snippet_begin_time:snippet_end_time]
+        snippet = signal_utils.up_sample(snippet)
+        offset = snippet_begin_time * configuration.upsample_factor
+        spike_start_time = min(len(signal), i * snippet_len) * configuration.upsample_factor
+
+        total_signal_norm_square = total_signal_norm_square + \
+            signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
+
+        signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode)
+        # total_signal_norm_square = total_signal_norm_square + signal_norm_sq
+        spike_times, spike_indexes, threshold_values = spike_generator. \
+            calculate_spike_times(signal_kernel_convolutions, ahp_period=ahp_period, ahp_high=ahp_high,
+                                  selected_kernel_indexes=selected_kernel_indexes, threshold=spiking_threshold,
+                                  offset=offset, start_time=spike_start_time,
+                                  end_time=-1 if i == (math.ceil(total_len / snippet_len) - 1)
+                                  else snippet_end_time * configuration.upsample_factor,
+                                  each_kernel_spikes=each_kernel_spikes)
+        all_spikes = all_spikes + spike_times
+        all_spike_indexes = all_spike_indexes + spike_indexes
+        all_thresholds = all_thresholds + threshold_values
+    if configuration.compute_time:
+        print(f'time to compute all spikes: {time.process_time()- start_time}')
+        start_time = time.process_time()
+    if len(spike_times) == 0 or len(spike_times) > max_spike_count:
+        return spike_times, spike_indexes, None, None, -1, None, -1
+    recons_coeffs = None
+    error_rate_fast = -1
+    absolute_error_rate = -1
+    if need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate:
+        recons_coeffs = calculate_reconstruction_in_window_mode(all_spikes, all_spike_indexes,
+                                                                all_thresholds, winddow_size=window_size)
+        if configuration.compute_time:
+            print(f'time to compute recons coeffs: {time.process_time() - start_time}')
+            start_time = time.process_time()
+        if need_error_rate_fast:
+            error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, all_thresholds,
+                                                                       total_signal_norm_square)
+        if (need_reconstructed_signal or need_error_rate_accurate) and recons_coeffs is not None:
+            upsampled_full_signal = signal_utils.up_sample(signal)
+            start_time = time.process_time()
+            recons = get_reconstructed_signal(len(upsampled_full_signal),
+                                              all_spikes, all_spike_indexes, recons_coeffs)
+            if configuration.compute_time:
+                print(f'time to compute reconstruction: {time.process_time() - start_time}')
+            plot_utils.plot_function(recons, title='final full recons')
+            absolute_error_rate = signal_utils.calculate_absolute_error_rate(upsampled_full_signal, recons)
+            print(f'absolute error rate: {absolute_error_rate}')
+    return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, error_rate_fast, recons, absolute_error_rate
 
 
 def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,
@@ -215,14 +428,14 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     if init_kernel:
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
-    sp_times, sp_indexes, thrs_values, recons_coeffs, z_scores, kernel_projections,\
+    sp_times, sp_indexes, thrs_values, recons_coeffs, z_scores, kernel_projections, \
     gamma_vals, recons_signal, gamma_vals_manual = iterative_spike_generator. \
-            spike_and_reconstruct_iteratively(signal_kernel_convolutions, window_mode=window_mode,
-                                              window_size=window_size,
-                                              norm_threshold_for_new_spike=norm_threshold, z_thresholds=z_threshold,
-                                              show_z_scores=show_z_vals, signal_norm_square=signal_norm_sq,
-                                              selected_kernel_indexes=selected_kernel_indexes,
-                                              input_signal=input_signal)
+        spike_and_reconstruct_iteratively(signal_kernel_convolutions, window_mode=window_mode,
+                                          window_size=window_size,
+                                          norm_threshold_for_new_spike=norm_threshold, z_thresholds=z_threshold,
+                                          show_z_scores=show_z_vals, signal_norm_square=signal_norm_sq,
+                                          selected_kernel_indexes=selected_kernel_indexes,
+                                          input_signal=input_signal)
     if recompute_recons_coeff:
         recons_coeffs = calculate_reconstruction(sp_times, sp_indexes, thrs_values)
     recons = None

@@ -35,7 +35,7 @@ def update_c_matrix(c_matrix, eta_values, zeta, beta_values, window_mode=False, 
     p_inv = common_utils.multiply_by_transpose(c_matrix_new)
     if configuration.compute_time:
         et = time.process_time()
-        print(f'time taken to update c_matrix: {et-st}')
+        print(f'time taken to update c_matrix: {et - st}')
     return c_matrix_new, p_inv
 
 
@@ -161,12 +161,16 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                     if z_vals_next[i] > z_thresholds[i]:
                         this_spike_index = i
                         this_threshold = all_convolutions[i][t]
-                        z_max_this = z_vals_next[i]
                         z_prev_val = z_vals_now[i]
                         z_next_val = z_next
                         spike_norm_max = new_spike_norm_sq
                         zeta_val_max = zeta_val_at_t
+                # update the max z_score for this time step
+                # This establishes one more criteria for local optimality
+                if z_max_this < z_vals_next[i]:
+                    z_max_this = z_vals_next[i]
 
+                # shift the values for the next time step
                 z_vals_now[i] = z_vals_next[i]
                 eta_vals_now[i] = eta_vals_next[i]
                 beta_vals_now[i] = beta_vals_next[i]
@@ -179,7 +183,7 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
         ##########################################################
         ########### add the spike and spike index here ###########
         ##########################################################
-        if this_spike_index > -1:
+        if this_spike_index > -1 and z_max_this == z_vals_now[this_spike_index]:
             ##########################################################
             ######## TODO: if window mode compress this part #########
             ##########################################################
@@ -258,7 +262,7 @@ def spike_and_reconstruct_iteratively(all_convolutions, window_mode=False, windo
                     gamma_vals_conv[i] = signal_utils.calculate_convolution(kernel_manager.all_kernels[i],
                                                                             recons_signal)
     if configuration.compute_time:
-        print(f'iterative spike generation took {time.process_time() -start_time} s')
+        print(f'iterative spike generation took {time.process_time() - start_time} s')
     return spike_times, spike_indexes, threshold_values, recons_coeffs, z_scores, \
            kernel_projections, gamma_vals, recons_signal, gamma_vals_manual
 

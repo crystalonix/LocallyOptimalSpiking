@@ -1,16 +1,16 @@
 import math
 
+import matplotlib.pyplot as plt
 import numpy as np
 
+import common_utils
 import configuration
 import file_utils
+import kernel_manager
 import plot_utils
 import reconstruction_manager
-import gammatone_calculator
 import signal_utils
-import kernel_manager
-import matplotlib.pyplot as plt
-import common_utils
+import wav_file_handler
 
 
 def split_signal_into_snippets(signal_index, sample_length, norm_threshold=0):
@@ -28,24 +28,36 @@ def split_signal_into_snippets(signal_index, sample_length, norm_threshold=0):
     return all_norms, all_snippets, full_len, full_signal, full_norm
 
 
-def get_signal(signal_index):
-    audio_filepath = '../../audio_text/'
-    file_name = audio_filepath + str(signal_index) + '.txt'
-    print(file_name)
-    full_signal = file_utils.read_1D_np_array(file_name)
-    return full_signal, np.sqrt(signal_utils.get_signal_norm_square(full_signal, configuration.actual_sampling_rate))
+def get_signal(signal_index, read_from_wav=False):
+    if read_from_wav:
+        file_name = configuration.training_sub_sample_folder_path + str(signal_index) + '.wav'
+        full_signal = wav_file_handler.wav_to_float_data(file_name)
+    else:
+        file_name = configuration.audio_filepath + str(signal_index) + '.txt'
+        full_signal = file_utils.read_1D_np_array(file_name)
+    return full_signal
 
 
-def get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold):
-    full_signal, full_norm = get_signal(signal_index)
+# def get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold):
+#     full_signal, full_norm = get_signal(signal_index)
+#     full_len = len(full_signal)
+#     number_of_snippets = math.ceil(full_len / sample_length)
+#     for i in range(number_of_snippets):
+#         this_snippet = full_signal[i * sample_length: min((i + 1) * sample_length, full_len)]
+#         this_norm = np.sqrt(signal_utils.get_signal_norm_square(this_snippet, configuration.actual_sampling_rate))
+#         if this_norm > norm_threshold:
+#             return this_snippet, this_norm, full_len, full_signal, full_norm
+#     return None, -1, full_len, full_signal, full_norm
+
+def get_first_snippet_above_threshold_norm(full_signal, sample_length, norm_threshold=-1.0):
     full_len = len(full_signal)
     number_of_snippets = math.ceil(full_len / sample_length)
     for i in range(number_of_snippets):
         this_snippet = full_signal[i * sample_length: min((i + 1) * sample_length, full_len)]
         this_norm = np.sqrt(signal_utils.get_signal_norm_square(this_snippet, configuration.actual_sampling_rate))
         if this_norm > norm_threshold:
-            return this_snippet, this_norm, full_len, full_signal, full_norm
-    return None, -1, full_len, full_signal, full_norm
+            return this_snippet, this_norm, full_len, full_signal, this_norm
+    return None, -1, full_len, full_signal, this_norm
 
 
 def drive_full_signal_reconstruction(signal_index, sample_length):
@@ -54,13 +66,16 @@ def drive_full_signal_reconstruction(signal_index, sample_length):
 
 def drive_select_snippet_reconstruction(signal_index, sample_length, norm_threshold=0.0,
                                         need_reconstructed_signal=False, ahp_period=configuration.ahp_period,
-                                        selected_kernel_indexes=None):
+                                        selected_kernel_indexes=None,
+                                        spiking_threshold=configuration.spiking_threshold,
+                                        signal_norm_square=None, signal_kernel_convolutions=None):
     snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
-    snippet = signal_utils.upsample(snippet)
+    snippet = signal_utils.up_sample(snippet)
     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction = \
         reconstruction_manager.drive_single_signal_reconstruction(
             snippet, False, need_reconstructed_signal=need_reconstructed_signal, ahp_period=ahp_period,
-            selected_kernel_indexes=selected_kernel_indexes)
+            selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
+            signal_norm_square=signal_norm_square, signal_kernel_convolutions=signal_kernel_convolutions)
     return snippet, spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction
 
 
@@ -75,7 +90,7 @@ def drive_select_snippet_reconstruction_iteratively(signal_index, sample_length,
         norm = np.sqrt(norm)
     else:
         snippet, norm, _, _, _ = get_first_snippet_above_threshold_norm(signal_index, sample_length, norm_threshold)
-    snippet = signal_utils.upsample(snippet)
+    snippet = signal_utils.up_sample(snippet)
     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, reconstruction, \
     all_convs, z_scores, kernel_projections, gamma_vals = reconstruction_manager.drive_single_signal_reconstruction_iteratively(
         snippet, False, need_reconstructed_signal=need_reconstructed_signal, window_mode=window_mode,
@@ -224,7 +239,6 @@ def drive_reconstruction():
             plt.show()
             # plot_utils.plot_function(recons)
         print('we are done here')
-
 
 # drive_reconstruction()
 ########################################################################################

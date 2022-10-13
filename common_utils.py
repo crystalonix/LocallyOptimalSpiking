@@ -166,21 +166,21 @@ def sort_spikes_on_kernel_indexes(spike_times, spike_indexes, num_kernels, displ
 # def matrix_sup_norm(matrix):
 
 
-sz = 2
-p_test = np.random.rand(sz, sz)
-p_test = p_test + p_test.T
-p_test = np.array([[1.0, 0.707], [0.707, 1.0]])
-# p_test[3:3] = 1.0
-eta = p_test[sz - 1, :sz - 1]
-print(f'check eta values: {eta}')
-p_test_inv_old = np.linalg.inv(p_test[:sz - 1, :sz - 1])
-p_test_inv_full = np.linalg.inv(p_test)
-beta = np.dot(p_test_inv_old, eta)
+# sz = 2
+# p_test = np.random.rand(sz, sz)
+# p_test = p_test + p_test.T
+# p_test = np.array([[1.0, 0.707], [0.707, 1.0]])
+# # p_test[3:3] = 1.0
+# eta = p_test[sz - 1, :sz - 1]
+# print(f'check eta values: {eta}')
+# p_test_inv_old = np.linalg.inv(p_test[:sz - 1, :sz - 1])
+# p_test_inv_full = np.linalg.inv(p_test)
+# beta = np.dot(p_test_inv_old, eta)
 
 # schur_comp = 1.0 / (1.0 - np.dot(eta, beta))
-p_test_inv_new = p_inv_iteratively_torch(p_test_inv_old, eta, beta)
-print(f'check the new p_inv: {p_test_inv_full}')
-print(f'check the difference in two inverses:\n{p_test_inv_full - p_test_inv_new.numpy()}')
+# p_test_inv_new = p_inv_iteratively_torch(p_test_inv_old, eta, beta)
+# print(f'check the new p_inv: {p_test_inv_full}')
+# print(f'check the difference in two inverses:\n{p_test_inv_full - p_test_inv_new.numpy()}')
 
 
 #

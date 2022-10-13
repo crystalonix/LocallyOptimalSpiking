@@ -37,7 +37,7 @@ def init(number_of_kernels, kernel_array=None, sampling_rate=configuration.sampl
         kernel_inner_products = [[None for i in range(len(all_kernels))] for j in range(len(all_kernels))]
         # convention here is to store the convolution of two kernels- index1, index2 with index1 < index2
         for i in range(len(all_kernels)):
-            print(f'norm of the kernel is: {signal_utils.get_signal_norm_square(all_kernels[i])}')
+            # print(f'norm of the kernel is: {signal_utils.get_signal_norm_square(all_kernels[i])}')
             for j in range(i, len(all_kernels)):
                 kernel_inner_products[i][j] = signal_utils.calculate_convolution(all_kernels[i][::-1], all_kernels[j],
                                                                                  sampling_rate)
