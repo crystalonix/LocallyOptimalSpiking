@@ -28,7 +28,7 @@ direct_invert_p = True
 testing = True
 
 number_of_threads = 10
-verbose = False
+verbose = True
 debug = False
 compute_time = True
 

@@ -14,7 +14,7 @@ abs_thres = 0
 
 def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value,
                           threshold=configuration.spiking_threshold,
-                          selected_kernel_indexes=None, offset=0, start_time=0, end_time=-1, each_kernel_spikes=None):
+                          selected_kernel_indexes=None, offset=0, spike_start_time=0, end_time=-1, each_kernel_spikes=None):
     """
     Computes the spikes for all kernels
     :param end_time:
@@ -24,7 +24,7 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
     :param threshold:
     :param selected_kernel_indexes:
     :param offset:
-    :param start_time:
+    :param spike_start_time:
     :param each_kernel_spikes:
     :return:
     """
@@ -54,7 +54,7 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
         calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, ahp_period,
                                          ahp_high, threshold, spike_counts,
                                          offset=offset,
-                                         start_time=start_time,
+                                         start_time=spike_start_time,
                                          end_time=end_time,
                                          each_kernel_spikes=each_kernel_spikes)
     if len(spike_times) == 0:
@@ -64,8 +64,8 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
         print(f' the percentage error is transmitting threshold: {100 * delta_thres / abs_thres}')
     if configuration.verbose:
         print(f'check the spike counts here: {spike_counts}')
-        print(
-            f'number of spikes: {len(spike_times)} and time to compute the spike: {time.process_time() - start_time}s')
+        print(f'number of spikes: {len(spike_times)} and '
+              f'time to compute the spike: {time.process_time() - start_time}s')
     return spike_times, spike_indexes, threshold_values
 
 
@@ -120,6 +120,16 @@ def calculate_spikes_for_one_kernel(all_convolutions, kernel_index, ahp_period=c
     return this_kernel_spike_times, threshold_values
 
 
+def init():
+    global abs_thres, delta_thres
+    abs_thres = 0
+    delta_thres = 0
+
+
+def get_threshold_transmision_error_rate():
+    return delta_thres / abs_thres
+
+
 def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, ahp_period=configuration.ahp_period,
                                      ahp_high=configuration.ahp_high_value, threshold=configuration.spiking_threshold,
                                      spike_counts=None, offset=0, start_time=0, end_time=-1, each_kernel_spikes=None):
@@ -155,7 +165,7 @@ def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, 
             last_spikes = spikes_of_each_kernel[index]
             ahp_effect_now = 0
             for n in range(len(last_spikes) - 1, -1, -1):
-                time_diff = (i+offset) - last_spikes[n]
+                time_diff = (i + offset) - last_spikes[n]
                 if time_diff > ahp_period:
                     break
                 else:
@@ -177,7 +187,7 @@ def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, 
                     threshold_values.append(threshold_now)
                 else:
                     threshold_values.append(this_convolution[i])
-                if configuration.debug:
+                if configuration.quantized_threshold_transmission:
                     abs_thres = abs_thres + abs(this_convolution[i])
                     delta_thres = delta_thres + abs(this_convolution[i] - threshold_now)
     return all_spike_times, spike_indexes, threshold_values

@@ -343,6 +343,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     total_signal_norm_square = 0
     each_kernel_spikes = [[] for i in range(number_of_kernels)]
     start_time = time.process_time()
+    spike_generator.init()
     for i in range(math.ceil(total_len / snippet_len)):
         snippet_begin_time = max(i * snippet_len - overlap_len, 0)
         snippet_end_time = min(len(signal), (i + 1) * snippet_len)
@@ -359,13 +360,19 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         spike_times, spike_indexes, threshold_values = spike_generator. \
             calculate_spike_times(signal_kernel_convolutions, ahp_period=ahp_period, ahp_high=ahp_high,
                                   selected_kernel_indexes=selected_kernel_indexes, threshold=spiking_threshold,
-                                  offset=offset, start_time=spike_start_time,
+                                  offset=offset, spike_start_time=spike_start_time,
                                   end_time=-1 if i == (math.ceil(total_len / snippet_len) - 1)
                                   else snippet_end_time * configuration.upsample_factor,
                                   each_kernel_spikes=each_kernel_spikes)
         all_spikes = all_spikes + spike_times
         all_spike_indexes = all_spike_indexes + spike_indexes
         all_thresholds = all_thresholds + threshold_values
+
+    threshold_error = -1
+    if configuration.quantized_threshold_transmission:
+        threshold_error = spike_generator.get_threshold_transmision_error_rate()
+        if configuration.verbose:
+            print(f'error in threshold transmission: {threshold_error}')
     if configuration.compute_time:
         print(f'time to compute all spikes: {time.process_time()- start_time}')
         start_time = time.process_time()
@@ -379,7 +386,6 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
                                                                 all_thresholds, winddow_size=window_size)
         if configuration.compute_time:
             print(f'time to compute recons coeffs: {time.process_time() - start_time}')
-            start_time = time.process_time()
         if need_error_rate_fast:
             error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, all_thresholds,
                                                                        total_signal_norm_square)
@@ -390,10 +396,12 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
                                               all_spikes, all_spike_indexes, recons_coeffs)
             if configuration.compute_time:
                 print(f'time to compute reconstruction: {time.process_time() - start_time}')
-            plot_utils.plot_function(recons, title='final full recons')
+            if configuration.debug:
+                plot_utils.plot_function(recons, title='final full recons')
             absolute_error_rate = signal_utils.calculate_absolute_error_rate(upsampled_full_signal, recons)
             print(f'absolute error rate: {absolute_error_rate}')
-    return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, error_rate_fast, recons, absolute_error_rate
+    return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, \
+        error_rate_fast, recons, absolute_error_rate, threshold_error
 
 
 def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,
