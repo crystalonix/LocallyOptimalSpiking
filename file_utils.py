@@ -47,7 +47,7 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
     with open(filename, newline='') as csvfile:
         data = list(csv.reader(csvfile, delimiter=delim))
     return np.array(data, dtype=data_type)
-
-
-ls = read_numpy_array_from_csv('sample.csv')
-print(f'{ls}')
+#
+#
+# ls = read_numpy_array_from_csv('sample.csv')
+# print(f'{ls}')
