@@ -7,6 +7,7 @@ import plot_utils
 import numpy as np
 import wav_file_handler
 import file_utils
+import math
 
 sample_numbers = [i for i in range(1, 100)]
 # [i for i in range(9, 30)]
@@ -16,7 +17,8 @@ overlap = 5000
 # choosing approx 5s snippets
 full_signal_len = 200000
 number_of_kernel = 50
-select_kernel_indexes = [i for i in range(2, number_of_kernel)]
+# exclude some of the very low frequency kernel to make it computationally efficient
+select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel/10), number_of_kernel)]
 signal_norm_thrs = -1.0
 # 1e-4
 spiking_thresholds = np.array([5e-6])
@@ -40,8 +42,8 @@ reconstruction_stats = []
 stats_csv_file = 'recons_reports.csv'
 signal_from_wav_file = False
 kernel_manager.init(number_of_kernel)
-# for i in range(number_of_kernel):
-#     print(f'len of kernel: {len(kernel_manager.all_kernels[i])}')
+for i in range(number_of_kernel):
+    print(f'len of kernel: {len(kernel_manager.all_kernels[i])}')
 i = 0
 snapshot_interval = 1
 reconstruction_stats = []
