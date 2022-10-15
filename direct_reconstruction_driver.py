@@ -13,7 +13,7 @@ sample_numbers = [i for i in range(1, 100)]
 # [i for i in range(9, 30)]
 sample_len = 15000
 snip_len = 40000
-overlap = 5000
+overlap = 7000
 # choosing approx 5s snippets
 full_signal_len = 200000
 number_of_kernel = 50
