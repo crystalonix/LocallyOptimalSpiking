@@ -1,4 +1,4 @@
-audio_filepath = '../../audio_text/'
+audio_filepath = 'audio_text/'
 training_sample_folder_path = './../train_curated/'
 training_sub_sample_folder_path = './../audio_train_subsample/'
 
