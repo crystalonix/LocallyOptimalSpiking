@@ -376,12 +376,12 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     if configuration.compute_time:
         print(f'time to compute all spikes: {time.process_time()- start_time}')
         start_time = time.process_time()
-    if len(spike_times) == 0 or len(spike_times) > max_spike_count:
-        return spike_times, spike_indexes, None, None, -1, None, -1
     recons_coeffs = None
     error_rate_fast = -1
     absolute_error_rate = -1
-    if need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate:
+    recons = None
+
+    if (len(spike_times) > 0) and (need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate):
         recons_coeffs = calculate_reconstruction_in_window_mode(all_spikes, all_spike_indexes,
                                                                 all_thresholds, winddow_size=window_size)
         if configuration.compute_time:
