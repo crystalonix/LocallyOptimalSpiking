@@ -351,7 +351,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     upsample_first = True
     if upsample_first:
         upsampled_full_signal = signal_utils.up_sample(signal)
-        total_signal_norm_square = signal_utils.get_signal_norm_square()
+        total_signal_norm_square = signal_utils.get_signal_norm_square(upsampled_full_signal)
     for i in range(math.ceil(total_len / snippet_len)):
         snippet_begin_time = max(i * snippet_len - overlap_len, 0)
         snippet_end_time = min(len(signal), (i + 1) * snippet_len)
