@@ -21,9 +21,10 @@ def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
     return all_convolutions
 
 
-def init_signal(signal, mode=configuration.mode, need_norm=True):
+def init_signal(signal, mode=configuration.mode, need_norm=True, select_kernel_indexes=None):
     """
     Initialize the necessary global data structures for the given signal
+    :param select_kernel_indexes:
     :param need_norm:
     :param mode:
     :return:
@@ -32,19 +33,22 @@ def init_signal(signal, mode=configuration.mode, need_norm=True):
     signal_norm_square = -1
     if need_norm:
         signal_norm_square = signal_utils.get_signal_norm_square(signal)
-    signal_kernel_convolutions = calculate_signal_kernel_convs(signal, mode)
+    signal_kernel_convolutions = calculate_signal_kernel_convs(signal, mode, select_kernel_indexes)
     return signal_norm_square, signal_kernel_convolutions  # , signal_kernel_bspline_convolutions
 
 
-def calculate_signal_kernel_convs(signal, mode=configuration.mode):
+def calculate_signal_kernel_convs(signal, mode=configuration.mode, select_kernel_indexes=None):
     """
     This function calculates the convolution of a signal with the given kernels
+    :param select_kernel_indexes:
     :param mode:
     :param signal:
     :return:
     """
     all_convolutions = []
     for i in range(kernel_manager.num_kernels):
+        if select_kernel_indexes is not None and i not in select_kernel_indexes:
+            continue
         if mode == 'expanded':
             all_convolutions.append(signal_utils.calculate_convolution(kernel_manager.all_kernels[i], signal))
         elif mode == 'compressed':
@@ -285,10 +289,10 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     if signal_kernel_convolutions is None:
         signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
-    sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
-        signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period, ahp_high=ahp_high,
-        selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
-        max_spike_count=max_spike_count, window_mode=window_mode, window_size=window_size)
+        sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
+            signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period, ahp_high=ahp_high,
+            selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
+            max_spike_count=max_spike_count, window_mode=window_mode, window_size=window_size)
     recons = None
     if need_error_rate_accurate:
         pass
@@ -344,18 +348,26 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     each_kernel_spikes = [[] for i in range(number_of_kernels)]
     start_time = time.process_time()
     spike_generator.init()
+    upsample_first = True
+    if upsample_first:
+        upsampled_full_signal = signal_utils.up_sample(signal)
+        total_signal_norm_square = signal_utils.get_signal_norm_square()
     for i in range(math.ceil(total_len / snippet_len)):
         snippet_begin_time = max(i * snippet_len - overlap_len, 0)
         snippet_end_time = min(len(signal), (i + 1) * snippet_len)
-        snippet = signal[snippet_begin_time:snippet_end_time]
-        snippet = signal_utils.up_sample(snippet)
         offset = snippet_begin_time * configuration.upsample_factor
+        if upsample_first:
+            snippet = upsampled_full_signal[offset: snippet_end_time * configuration.upsample_factor]
+        else:
+            snippet = signal[snippet_begin_time:snippet_end_time]
+            snippet = signal_utils.up_sample(snippet)
+            total_signal_norm_square = total_signal_norm_square + \
+                                       signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
+
         spike_start_time = min(len(signal), i * snippet_len) * configuration.upsample_factor
 
-        total_signal_norm_square = total_signal_norm_square + \
-            signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
-
-        signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode)
+        signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode,
+                                                                 False, selected_kernel_indexes)
         # total_signal_norm_square = total_signal_norm_square + signal_norm_sq
         spike_times, spike_indexes, threshold_values = spike_generator. \
             calculate_spike_times(signal_kernel_convolutions, ahp_period=ahp_period, ahp_high=ahp_high,
@@ -374,7 +386,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         if configuration.verbose:
             print(f'error in threshold transmission: {threshold_error}')
     if configuration.compute_time:
-        print(f'time to compute all spikes: {time.process_time()- start_time}')
+        print(f'time to compute all spikes: {time.process_time() - start_time}')
         start_time = time.process_time()
     recons_coeffs = None
     error_rate_fast = -1
@@ -401,7 +413,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             absolute_error_rate = signal_utils.calculate_absolute_error_rate(upsampled_full_signal, recons)
             print(f'absolute error rate: {absolute_error_rate}')
     return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, \
-        error_rate_fast, recons, absolute_error_rate, threshold_error
+           error_rate_fast, recons, absolute_error_rate, threshold_error
 
 
 def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,

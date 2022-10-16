@@ -155,7 +155,8 @@ def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, 
     else:
         spikes_of_each_kernel = each_kernel_spikes
     global abs_thres, delta_thres
-    for i in range(start_time - offset, len(all_convolutions[0]) if end_time == -1 else end_time - offset):
+    for i in range(start_time - offset,
+                   len(all_convolutions[selected_kernel_indexes[0]]) if end_time == -1 else end_time - offset):
         for index in range(len(all_convolutions)):
             if selected_kernel_indexes is not None and index not in selected_kernel_indexes:
                 continue
