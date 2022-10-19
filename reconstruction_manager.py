@@ -48,6 +48,7 @@ def calculate_signal_kernel_convs(signal, mode=configuration.mode, select_kernel
     all_convolutions = []
     for i in range(kernel_manager.num_kernels):
         if select_kernel_indexes is not None and i not in select_kernel_indexes:
+            all_convolutions.append([])
             continue
         if mode == 'expanded':
             all_convolutions.append(signal_utils.calculate_convolution(kernel_manager.all_kernels[i], signal))
@@ -356,6 +357,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         snippet_begin_time = max(i * snippet_len - overlap_len, 0)
         snippet_end_time = min(len(signal), (i + 1) * snippet_len)
         offset = snippet_begin_time * configuration.upsample_factor
+        spike_start_time = min(len(signal), i * snippet_len) * configuration.upsample_factor
         if upsample_first:
             snippet = upsampled_full_signal[offset: snippet_end_time * configuration.upsample_factor]
         else:
@@ -363,8 +365,6 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             snippet = signal_utils.up_sample(snippet)
             total_signal_norm_square = total_signal_norm_square + \
                                        signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
-
-        spike_start_time = min(len(signal), i * snippet_len) * configuration.upsample_factor
 
         signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode,
                                                                  False, selected_kernel_indexes)

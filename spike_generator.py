@@ -14,7 +14,8 @@ abs_thres = 0
 
 def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value,
                           threshold=configuration.spiking_threshold,
-                          selected_kernel_indexes=None, offset=0, spike_start_time=0, end_time=-1, each_kernel_spikes=None):
+                          selected_kernel_indexes=None, offset=0, spike_start_time=0,
+                          end_time=-1, each_kernel_spikes=None):
     """
     Computes the spikes for all kernels
     :param end_time:
@@ -59,7 +60,7 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
                                          each_kernel_spikes=each_kernel_spikes)
     if len(spike_times) == 0:
         return [], [], []
-    if configuration.debug:
+    if configuration.quantized_threshold_transmission:
         print(f'check the spike counts here: {len(spike_times)}')
         print(f' the percentage error is transmitting threshold: {100 * delta_thres / abs_thres}')
     if configuration.verbose:
@@ -178,7 +179,8 @@ def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, 
                 if configuration.debug:
                     print(f' threshold: {threshold_now} and convolution: {this_convolution[i]} and convolution prior:'
                           f'{-1 if i <= 0 else this_convolution[i - 1]} at time {i} with last spike '
-                          f'{-1 if len(spikes_of_each_kernel[index]) == 0 else spikes_of_each_kernel[index][-1]}')
+                          f'{-1 if len(spikes_of_each_kernel[index]) == 0 else spikes_of_each_kernel[index][-1]}'
+                          f' kernel index:{index}')
                 spikes_of_each_kernel[index].append(i + offset)
                 all_spike_times.append(i + offset)
                 spike_indexes.append(index)

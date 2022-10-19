@@ -11,11 +11,11 @@ import math
 
 sample_numbers = [i for i in range(1, 100)]
 # [i for i in range(9, 30)]
-sample_len = 15000
+sample_len = 50000
 snip_len = 20000
 overlap = 7000
 # choosing approx 5s snippets
-full_signal_len = 50000
+full_signal_len = 100000
 number_of_kernel = 50
 # exclude some of the very low frequency kernel to make it computationally efficient
 select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
@@ -24,10 +24,10 @@ signal_norm_thrs = -1.0
 spiking_thresholds = np.array([5e-6])
 # [5e-5, 5e-6, 5e-7]
 upsample_factor = configuration.upsample_factor
-ahp_periods = np.array(range(2000, 500, -100))
+ahp_periods = np.array(range(2000, 100, -200))*configuration.upsample_factor
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([100]) * upsample_factor
+ahp_highs = np.array([10]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
 max_spike = full_signal_len
 #           1000000
@@ -61,13 +61,13 @@ for sample_number in sample_numbers:
         signal_norm_square, signal_kernel_convolutions = reconstruction_manager.init_signal(snippet, configuration.mode)
     for spiking_threshold in spiking_thresholds:
         for ahp_high in ahp_highs:
+            ahp_high = ahp_high * spiking_threshold
             for ahp_period in ahp_periods:
-                ahp_high = ahp_high * spiking_threshold
                 i = i + 1
                 threshold_error = -1
                 if reconstruct_full_signal:
                     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, \
-                        reconstruction, abs_error, threshold_error = \
+                    reconstruction, abs_error, threshold_error = \
                         reconstruction_manager.drive_piecewise_signal_reconstruction(
                             actual_signal, False, number_of_kernels=number_of_kernel,
                             need_reconstructed_signal=need_recons, ahp_period=ahp_period,
@@ -91,7 +91,7 @@ for sample_number in sample_numbers:
                 if save_recons_to_wav and reconstruction is not None:
                     signal_to_save = signal_utils.down_sample(reconstruction)
                     file = configuration.training_sub_sample_folder_path + 'reconstruction-' \
-                           + str(sample_number) + '.wav'
+                        + str(sample_number) + '.wav'
                     wav_file_handler.store_float_date_to_wav(file, signal_to_save)
                 if show_plots and reconstruction is not None:
                     plot_utils.plot_functions([signal_utils.down_sample(reconstruction, up_factor=10), actual_signal],
@@ -99,8 +99,9 @@ for sample_number in sample_numbers:
                                                            f' spikes and error rate:{error_rate}', f'original signal'])
                     plot_utils.spike_train_plot(spike_times, spike_indexes,
                                                 title=f'all spikes for signal {sample_number}')
+                len_of_signal = full_signal_len if reconstruct_full_signal else sample_len
                 print(f'snippet#: {sample_number}, spike rate: '
-                      f'{configuration.actual_sampling_rate * len(spike_times) / sample_len}, '
+                      f'{configuration.actual_sampling_rate * len(spike_times) / len_of_signal}, '
                       f'reconstruction error: {error_rate}, '
                       f'number of spikes: {len(spike_times)} threshold: {spiking_threshold}, ahp high:{ahp_high}',
                       f'ahp period:{ahp_period}')
