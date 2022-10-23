@@ -286,26 +286,26 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
     :param need_reconstructed_signal:
     :return:
     """
+    recons = None
     if init_kernel:
         kernel_manager.init(number_of_kernels, kernel_frequencies)
     if signal_kernel_convolutions is None:
         signal_norm_square, signal_kernel_convolutions = init_signal(signal, computation_mode)
-        sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
-            signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period, ahp_high=ahp_high,
-            selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
-            max_spike_count=max_spike_count, window_mode=window_mode, window_size=window_size)
-    recons = None
-    if need_error_rate_accurate:
-        pass
+    sp_times, sp_indexes, thrs_values, recons_coeffs = calculate_spike_times_and_reconstruct(
+        signal_kernel_convolutions, need_error_rate_fast, ahp_period=ahp_period, ahp_high=ahp_high,
+        selected_kernel_indexes=selected_kernel_indexes, spiking_threshold=spiking_threshold,
+        max_spike_count=max_spike_count, window_mode=window_mode, window_size=window_size)
+
     if need_error_rate_fast and recons_coeffs is not None:
         error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, thrs_values, signal_norm_square)
     else:
         error_rate_fast = -1
-    if need_reconstructed_signal and recons_coeffs is not None:
+    absolute_error_rate = -1
+    if (need_reconstructed_signal or need_error_rate_accurate) and recons_coeffs is not None:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
         absolute_error_rate = signal_utils.calculate_absolute_error_rate(signal, recons)
         print(f'absolute error rate: {absolute_error_rate}')
-    return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons
+    return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, absolute_error_rate
 
 
 def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_kernels=-1, kernel_frequencies=None,

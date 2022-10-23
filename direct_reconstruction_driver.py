@@ -9,27 +9,27 @@ import wav_file_handler
 import file_utils
 import math
 
-sample_numbers = [i for i in range(1, 100)]
+sample_numbers = [i for i in range(4, 20)]
 # [i for i in range(9, 30)]
-sample_len = 50000
+sample_len = 5000
 snip_len = 20000
 overlap = 7000
 # choosing approx 5s snippets
-full_signal_len = 100000
-number_of_kernel = 50
+full_signal_len = 5000
+number_of_kernel = 10
 # exclude some of the very low frequency kernel to make it computationally efficient
-select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
+select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10)+1, number_of_kernel)]
 signal_norm_thrs = -1.0
 # 1e-4
-spiking_thresholds = np.array([5e-6])
+spiking_thresholds = np.array([5e-8])
 # [5e-5, 5e-6, 5e-7]
 upsample_factor = configuration.upsample_factor
-ahp_periods = np.array(range(2000, 100, -200))*configuration.upsample_factor
+ahp_periods = np.array(range(200, 50, -20))*configuration.upsample_factor
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([10]) * upsample_factor
+ahp_highs = np.array([1]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
-max_spike = full_signal_len
+max_spike = full_signal_len/3
 #           1000000
 # [5e-3, 2e-3, 5e-4, 2e-4, 5e-5, 2e-5, 5e-6, 2e-6, 5e-7, 2e-7, 5e-8, 2e-8, 5e-9, 5e-10]
 win_mode = True
@@ -40,7 +40,7 @@ need_recons = False
 accurate_err = True
 save_recons_to_wav = False
 reconstruction_stats = []
-stats_csv_file = 'recons_reports.csv'
+stats_csv_file = 'small_recons_reports.csv'
 signal_from_wav_file = False
 kernel_manager.init(number_of_kernel)
 for i in range(number_of_kernel):
@@ -76,13 +76,13 @@ for sample_number in sample_numbers:
                             window_size=win_size, snippet_len=snip_len, overlap_len=overlap)
                 else:
                     spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, \
-                    reconstruction = reconstruction_manager.drive_single_signal_reconstruction(
-                        snippet, False, number_of_kernels=number_of_kernel, need_reconstructed_signal=need_recons,
-                        ahp_period=ahp_period, selected_kernel_indexes=select_kernel_indexes,
-                        spiking_threshold=spiking_threshold,
-                        signal_norm_square=signal_norm_square,
-                        signal_kernel_convolutions=signal_kernel_convolutions,
-                        ahp_high=ahp_high, max_spike_count=max_spike, window_mode=win_mode, window_size=win_size)
+                        reconstruction, abs_error = reconstruction_manager.drive_single_signal_reconstruction(
+                            snippet, False, number_of_kernels=number_of_kernel, need_reconstructed_signal=need_recons,
+                            ahp_period=ahp_period, selected_kernel_indexes=select_kernel_indexes,
+                            spiking_threshold=spiking_threshold, need_error_rate_accurate=accurate_err,
+                            signal_norm_square=signal_norm_square,
+                            signal_kernel_convolutions=signal_kernel_convolutions,
+                            ahp_high=ahp_high, max_spike_count=max_spike, window_mode=win_mode, window_size=win_size)
                 reconstruction_stats.append([sample_number, abs_error, error_rate, threshold_error,
                                              configuration.upsample_factor * len(spike_times) / len(actual_signal),
                                              ahp_period, ahp_high, spiking_threshold])
