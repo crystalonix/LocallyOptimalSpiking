@@ -18,6 +18,7 @@ sample_rate = 0
 
 def init(number_of_kernels, kernel_array=None, sampling_rate=configuration.sampling_rate, normalize=True,
          mode=configuration.mode, load_from_cache=True):
+    # TODO: make it more efficient
     """
     Initializes a number of kernels by populating the necessary data structures
     :param load_from_cache:

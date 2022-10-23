@@ -98,9 +98,12 @@ def plot_matrix(data, xrange=None, yrange=None, x_label=None, y_label=None, titl
         plt.show()
 
 
-def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5, title='spike plot'):
+def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5,
+                     title='spike plot', x_title=None, y_title=None):
     """
     Shows the spike trains in a scatter plot
+    :param y_title:
+    :param x_title:
     :param size:
     :param title:
     :param spike_times:
@@ -112,7 +115,9 @@ def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5, title='s
         plt.scatter(spike_times, spike_indexes, s=size, c=colors)
     else:
         plt.scatter(spike_times, spike_indexes, s=size)
-    # plt.xlim([0, np.max(spike_indexes)])
+    if x_title is not None or y_title is not None:
+        plt.xlabel(x_title)
+        plt.ylabel(y_title)
     plt.title(title)
     plt.show()
 
@@ -205,8 +210,8 @@ def plot_kernel_spike_profile(spike_times, conv_values, z_scores, kernel_project
 
     if other_fns is not None:
         for i in range(len(other_fns)):
-            axs[4+i].plot(other_fns[i], linewidth=line_width)
-            axs[4+i].set_title(other_titles[i])
+            axs[4 + i].plot(other_fns[i], linewidth=line_width)
+            axs[4 + i].set_title(other_titles[i])
 
     spike_heights = [1.0 for i in range(len(spike_times))]
     axs[k].bar(spike_times, spike_heights, width=width)

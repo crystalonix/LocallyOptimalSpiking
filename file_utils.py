@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
+import plot_utils
 
 
 def read_1D_np_array(filename, delim=','):
@@ -47,7 +48,14 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
     with open(filename, newline='') as csvfile:
         data = list(csv.reader(csvfile, delimiter=delim))
     return np.array(data, dtype=data_type)
-#
-#
-# ls = read_numpy_array_from_csv('sample.csv')
-# print(f'{ls}')
+
+###########################################################################################
+# following piece of code is used to generate error scatter plot to be used in the paper #
+###########################################################################################
+# reports_csv = '../csvresults/master_report.csv'
+# results = read_numpy_array_from_csv(reports_csv)
+# filtered_results = results[:, [1, 4]]
+# filtered_results = filtered_results[filtered_results[:, 0] >= 0]
+# plot_utils.spike_train_plot(-10 * np.log10(filtered_results[:, 0]), filtered_results[:, 1] / 10,
+#                             x_title='error rate in DB', y_title='spike rate as a fraction of Nyquist rate')
+# print('done')
