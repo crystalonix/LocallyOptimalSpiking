@@ -99,9 +99,10 @@ def plot_matrix(data, xrange=None, yrange=None, x_label=None, y_label=None, titl
 
 
 def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5,
-                     title='spike plot', x_title=None, y_title=None):
+                     title='spike plot', x_title=None, y_title=None, hold=False):
     """
     Shows the spike trains in a scatter plot
+    :param hold:
     :param y_title:
     :param x_title:
     :param size:
@@ -119,7 +120,8 @@ def spike_train_plot(spike_times, spike_indexes, colors=None, size=0.5,
         plt.xlabel(x_title)
         plt.ylabel(y_title)
     plt.title(title)
-    plt.show()
+    if not hold:
+        plt.show()
 
 
 def plot_multiple_spike_trains(spike_times, spike_indexes, num_cols=1, plot_titles=None, size=0.5, xranges=None,

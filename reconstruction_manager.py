@@ -107,6 +107,66 @@ def calculate_reconstruction_in_window_mode(spike_times, spike_indexes, threshol
     return recons_coeffs
 
 
+def calculate_reconstruction_in_batch_window_mode(spike_times, spike_indexes, threshold_crossing_values,
+                                                  window_size=configuration.window_size,
+                                                  batch_size=configuration.window_spike_batch_size):
+    """
+    Once spike times are computed this method computes the reconstruction coefficients
+    """
+    step_len = 1000
+    recons_coeffs = np.zeros(len(spike_times))
+    p_matrix = calculate_p_matrix(spike_times[: batch_size], spike_indexes[: batch_size])
+    recons_coeffs[:min(batch_size, len(spike_times))] = np.squeeze(
+        common_utils.solve_for_coefficients(p_matrix,
+                                            threshold_crossing_values[:min(batch_size, len(spike_times))]).numpy())
+    for b in range(1, math.ceil(len(spike_times) / batch_size)):
+        start_index = max(batch_size * b - window_size, 0)
+        window_offset = batch_size * b - start_index
+        end_index = min(batch_size * (b + 1), len(spike_times))
+        spikes_to_consider = spike_times[start_index:end_index]
+        indexes_to_consider = spike_indexes[start_index:end_index]
+        p_matrix = update_p_matrix_in_windowed_batch_mode(p_matrix,
+                                                          spikes_to_consider, indexes_to_consider, window_offset)
+        windowed_eta_vals = p_matrix[:window_offset, window_offset:]
+        t_vector = np.array(threshold_crossing_values[start_index + window_offset:end_index]) - \
+                   np.matmul(windowed_eta_vals.T, recons_coeffs[start_index: start_index + window_offset])
+        t_vector_all = np.zeros(len(spikes_to_consider))
+        t_vector_all[window_offset:] = t_vector
+        coeffs = common_utils.solve_for_coefficients(p_matrix, t_vector_all).numpy()
+        recons_coeffs[start_index:end_index] = \
+            recons_coeffs[start_index:end_index] + np.squeeze(coeffs)
+    return recons_coeffs
+
+
+def update_p_matrix_in_windowed_batch_mode(p_matrix, spikes_to_consider,
+                                           indexes_to_consider, window_offset):
+    """
+    This method updates an existing p_matrix to a new one based on a new set of spikes
+    :param window_offset:
+    :param spikes_to_consider:
+    :param indexes_to_consider:
+    :type p_matrix
+    """
+    n_dim = len(spikes_to_consider)
+    updated_p_mat = np.zeros((n_dim, n_dim))
+    updated_p_mat[:window_offset, :window_offset] = p_matrix[-window_offset:, -window_offset:]
+    all_eta_vals = []
+    for i in range(window_offset, n_dim):
+        eta_this = calculate_eta(spikes_to_consider[:window_offset], indexes_to_consider[:window_offset],
+                                 spikes_to_consider[i], indexes_to_consider[i])
+        if len(all_eta_vals) == 0:
+            all_eta_vals.append(eta_this)
+            all_eta_vals = np.reshape(all_eta_vals, (-1, 1))
+        else:
+            all_eta_vals = np.hstack((all_eta_vals, np.array([eta_this]).T))
+    # include eta values in p_matrix update
+    updated_p_mat[:window_offset, window_offset:] = all_eta_vals
+    # calculate the new block of the p_matrix
+    batch_p = calculate_p_matrix(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
+    updated_p_mat[window_offset:, window_offset:] = batch_p
+    return updated_p_mat
+
+
 # TODO: move this to a separate file
 def calculate_eta(spike_times, spike_indexes, current_time, current_index, window_mode=False, window_size=-1):
     """
@@ -316,11 +376,13 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
                                           spiking_threshold=configuration.spiking_threshold,
                                           max_spike_count=configuration.max_spike_count,
                                           window_size=configuration.window_size,
+                                          batch_size=configuration.window_spike_batch_size,
                                           snippet_len=configuration.snippet_length,
                                           overlap_len=configuration.signal_interleaving_length):
     """
     This method is invoked to reconstruct a signal which large enough
     so that it can't fit entirely in memory for processing
+    :param batch_size:
     :param overlap_len:
     :param signal:
     :param init_kernel:
@@ -368,6 +430,15 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
 
         signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode,
                                                                  False, selected_kernel_indexes)
+        if configuration.variable_threshold and i == 0:
+            max_vals = [np.max(a) if len(a) > 0 else 0 for a in signal_kernel_convolutions]
+            max_conv = np.max(max_vals)
+
+            while spiking_threshold > max_conv / 100:
+                spiking_threshold = spiking_threshold / 10
+            if configuration.debug:
+                print(f'max convolution value: {max_conv} and spiking threshold: {spiking_threshold}')
+
         # total_signal_norm_square = total_signal_norm_square + signal_norm_sq
         spike_times, spike_indexes, threshold_values = spike_generator. \
             calculate_spike_times(signal_kernel_convolutions, ahp_period=ahp_period, ahp_high=ahp_high,
@@ -393,9 +464,15 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     absolute_error_rate = -1
     recons = None
 
-    if (len(spike_times) > 0) and (need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate):
-        recons_coeffs = calculate_reconstruction_in_window_mode(all_spikes, all_spike_indexes,
-                                                                all_thresholds, winddow_size=window_size)
+    if (0 < len(spike_times) < max_spike_count) \
+            and (need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate):
+        if configuration.windowing_batch_mode:
+            recons_coeffs = calculate_reconstruction_in_batch_window_mode(all_spikes, all_spike_indexes,
+                                                                          all_thresholds, window_size=window_size,
+                                                                          batch_size=batch_size)
+        else:
+            recons_coeffs = calculate_reconstruction_in_window_mode(all_spikes, all_spike_indexes,
+                                                                    all_thresholds, winddow_size=window_size)
         if configuration.compute_time:
             print(f'time to compute recons coeffs: {time.process_time() - start_time}')
         if need_error_rate_fast:
@@ -413,7 +490,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             absolute_error_rate = signal_utils.calculate_absolute_error_rate(upsampled_full_signal, recons)
             print(f'absolute error rate: {absolute_error_rate}')
     return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, \
-           error_rate_fast, recons, absolute_error_rate, threshold_error
+           error_rate_fast, recons, absolute_error_rate, threshold_error, spiking_threshold
 
 
 def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,

@@ -97,7 +97,7 @@ def calculate_signal_kernel_convs_with_zero_pad(snippet, selected_kernel_indexes
     return all_convolutions
 
 
-sample_numbers = [i for i in range(1, 20)]
+sample_numbers = [i for i in range(9, 20)]
 up_factor = 10
 snippet_length = 5000
 len_with_zero_pad = 90000

@@ -26,6 +26,9 @@ z_score_by_residual_norm = False
 calculate_recons_coeffs = False
 direct_invert_p = True
 testing = True
+windowing_batch_mode = True
+variable_threshold = True
+threshold_reduction_factor = 10
 
 number_of_threads = 10
 verbose = False
@@ -34,4 +37,5 @@ compute_time = True
 
 mode = "expanded"
 window_size = 10
+window_spike_batch_size = 500
 # 'compressed'
