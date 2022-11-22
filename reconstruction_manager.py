@@ -167,7 +167,7 @@ def calculate_reconstruction_in_batch_window_mode(spike_times, spike_indexes, th
         else:
             p_matrix = update_p_matrix_in_windowed_batch_mode(p_matrix,
                                                               spikes_to_consider, indexes_to_consider, window_offset)
-        if configuration.compute_time:
+        if configuration.debug:
             print(f'time for p_matrix update: {time.time() - t_1}')
             t_1 = time.time()
 
@@ -177,13 +177,13 @@ def calculate_reconstruction_in_batch_window_mode(spike_times, spike_indexes, th
 
         t_vector_all = np.zeros(len(spikes_to_consider))
         t_vector_all[window_offset:] = t_vector
-        if configuration.compute_time:
+        if configuration.debug:
             print(f'time for t_vector update: {time.time() - t_1}')
             t_1 = time.time()
         coeffs = common_utils.solve_for_coefficients(p_matrix, t_vector_all).numpy()
         recons_coeffs[start_index:end_index] = \
             recons_coeffs[start_index:end_index] + np.squeeze(coeffs)
-        if configuration.compute_time:
+        if configuration.debug:
             print(f'time for recons update: {time.time() - t_1}')
             t_1 = time.time()
     return recons_coeffs

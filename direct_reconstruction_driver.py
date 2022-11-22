@@ -21,7 +21,7 @@ overlap = 7000
 full_signal_len = 50000
 number_of_kernel = 50
 # exclude some of the very low frequency kernel to make it computationally efficient
-select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10) * 2, number_of_kernel)]
+select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
 signal_norm_thrs = -1.0
 # 1e-4
 spiking_thresholds = np.array([5e-5])
@@ -32,7 +32,7 @@ ahp_periods = np.array(range(1000, 100, -100)) * configuration.upsample_factor
 ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 20, -20)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([10]) * upsample_factor
+ahp_highs = np.array([1]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
 max_spike = full_signal_len / 1.5
 #           1000000
@@ -100,7 +100,7 @@ for sample_number in sample_numbers:
                     print(f'time for this iteration: {time_diff}')
                 reconstruction_stats.append([sample_number, abs_error, error_rate, threshold_error,
                                              len(spike_times) / len(actual_signal), ahp_period, ahp_high,
-                                             spiking_threshold, time_diff])
+                                             spiking_threshold, time_diff, win_size])
                 if configuration.debug:
                     print(f'all spikes occurring at: {spike_times}')
                 if save_recons_to_wav and reconstruction is not None:
