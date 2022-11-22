@@ -232,22 +232,13 @@ def update_p_matrix_in_windowed_batch_mode_parallel(p_matrix, spikes_to_consider
     updated_p_mat[:window_offset, :window_offset] = p_matrix[-window_offset:, -window_offset:]
     all_eta_vals = []
     results = [None for i in range(n_dim - window_offset)]
-    print(f'start with eta parallel')
     with concurrent.futures.ProcessPoolExecutor(max_workers=configuration.number_of_threads) as executor:
         for k, result in enumerate(executor.map(calculate_eta, itertools.repeat(spikes_to_consider[:window_offset]),
                                                 itertools.repeat(indexes_to_consider[:window_offset]),
                                                 spikes_to_consider[window_offset:n_dim],
                                                 indexes_to_consider[window_offset:n_dim])):
             results[k] = result
-    print(f'done with eta parallel')
     all_eta_vals = np.array(results).T
-    # for i in range(len(results)):
-    #     if len(all_eta_vals) == 0:
-    #         all_eta_vals.append(results[0])
-    #         all_eta_vals = np.reshape(all_eta_vals, (-1, 1))
-    #     else:
-    #         all_eta_vals = np.hstack((all_eta_vals, np.array([results[i]]).T))
-    print(f'done with eta stacking')
     # include eta values in p_matrix update
     updated_p_mat[:window_offset, window_offset:] = all_eta_vals
     # calculate the new block of the p_matrix
@@ -255,7 +246,6 @@ def update_p_matrix_in_windowed_batch_mode_parallel(p_matrix, spikes_to_consider
         batch_p = calculate_p_matrix_parallel(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
     else:
         batch_p = calculate_p_matrix(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
-    print(f'done with P parallel')
     updated_p_mat[window_offset:, window_offset:] = batch_p
     return updated_p_mat
 

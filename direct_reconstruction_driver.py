@@ -28,7 +28,7 @@ spiking_thresholds = np.array([5e-5])
 # [5e-5, 5e-6, 5e-7]
 upsample_factor = configuration.upsample_factor
 # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
-ahp_periods = np.array(range(100, 100, -100)) * configuration.upsample_factor
+ahp_periods = np.array(range(1000, 100, -100)) * configuration.upsample_factor
 ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 20, -20)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
