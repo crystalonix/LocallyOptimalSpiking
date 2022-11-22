@@ -14,11 +14,11 @@ import wav_file_handler
 
 sample_numbers = [i for i in range(1, 200)]
 # [i for i in range(9, 30)]
-sample_len = 50000
+sample_len = 100000
 snip_len = 10000
 overlap = 7000
 # choosing approx 5s snippets
-full_signal_len = 50000
+full_signal_len = 100000
 number_of_kernel = 50
 # exclude some of the very low frequency kernel to make it computationally efficient
 select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
@@ -38,8 +38,8 @@ max_spike = full_signal_len / 1.5
 #           1000000
 # [5e-3, 2e-3, 5e-4, 2e-4, 5e-5, 2e-5, 5e-6, 2e-6, 5e-7, 2e-7, 5e-8, 2e-8, 5e-9, 5e-10]
 win_mode = True
-win_factor = 6e6
-max_win_size = 10000
+win_factor = 10e6
+max_win_size = 15000
 spike_batch_size = 500
 reconstruct_full_signal = True
 show_plots = False
