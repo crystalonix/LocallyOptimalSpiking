@@ -12,13 +12,13 @@ import reconstruction_manager
 import signal_utils
 import wav_file_handler
 
-sample_numbers = [i for i in range(201, 400)]
+sample_numbers = [i for i in range(1, 200)]
 # [i for i in range(9, 30)]
-sample_len = 90000
+sample_len = 50000
 snip_len = 10000
 overlap = 7000
 # choosing approx 5s snippets
-full_signal_len = 90000
+full_signal_len = 50000
 number_of_kernel = 50
 # exclude some of the very low frequency kernel to make it computationally efficient
 select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10) * 2, number_of_kernel)]
@@ -28,7 +28,7 @@ spiking_thresholds = np.array([5e-5])
 # [5e-5, 5e-6, 5e-7]
 upsample_factor = configuration.upsample_factor
 # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
-ahp_periods = np.array(range(1000, 100, -100)) * configuration.upsample_factor
+ahp_periods = np.array(range(100, 100, -100)) * configuration.upsample_factor
 ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 20, -20)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
@@ -97,6 +97,7 @@ for sample_number in sample_numbers:
                 time_diff = -1
                 if configuration.compute_time:
                     time_diff = time.time() - initial_time
+                    print(f'time for this iteration: {time_diff}')
                 reconstruction_stats.append([sample_number, abs_error, error_rate, threshold_error,
                                              len(spike_times) / len(actual_signal), ahp_period, ahp_high,
                                              spiking_threshold, time_diff])
@@ -105,7 +106,7 @@ for sample_number in sample_numbers:
                 if save_recons_to_wav and reconstruction is not None:
                     signal_to_save = signal_utils.down_sample(reconstruction)
                     file = configuration.training_sub_sample_folder_path + 'reconstruction-' \
-                           + str(sample_number) + '.wav'
+                        + str(sample_number) + '.wav'
                     wav_file_handler.store_float_date_to_wav(file, signal_to_save)
                 if show_plots and reconstruction is not None:
                     plot_utils.plot_functions([signal_utils.down_sample(reconstruction, up_factor=10), actual_signal],

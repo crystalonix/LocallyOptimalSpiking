@@ -27,6 +27,8 @@ calculate_recons_coeffs = False
 direct_invert_p = True
 testing = True
 windowing_batch_mode = True
+parallel_convolution = True
+
 variable_threshold = True
 threshold_reduction_factor = 10
 

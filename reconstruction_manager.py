@@ -10,6 +10,8 @@ import signal_utils
 import spike_generator
 import plot_utils
 import math
+import concurrent.futures
+import itertools
 
 
 def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
@@ -33,7 +35,10 @@ def init_signal(signal, mode=configuration.mode, need_norm=True, select_kernel_i
     signal_norm_square = -1
     if need_norm:
         signal_norm_square = signal_utils.get_signal_norm_square(signal)
-    signal_kernel_convolutions = calculate_signal_kernel_convs(signal, mode, select_kernel_indexes)
+    if configuration.parallel_convolution:
+        signal_kernel_convolutions = calculate_signal_kernel_convs_parallel(signal, select_kernel_indexes)
+    else:
+        signal_kernel_convolutions = calculate_signal_kernel_convs(signal, mode, select_kernel_indexes)
     return signal_norm_square, signal_kernel_convolutions  # , signal_kernel_bspline_convolutions
 
 
@@ -60,6 +65,35 @@ def calculate_signal_kernel_convs(signal, mode=configuration.mode, select_kernel
     return all_convolutions
 
 
+def calculate_signal_kernel_convs_parallel(signal, select_kernel_indexes=None):
+    """
+    This function calculates the convolution of a signal with the given kernels in parallel mode
+    :param select_kernel_indexes:
+    :param signal:
+    :return:
+    """
+    all_convolutions = [None for i in range(kernel_manager.num_kernels)]
+    with concurrent.futures.ProcessPoolExecutor(max_workers=configuration.number_of_threads) as executor:
+        for i, result in enumerate(executor.map(get_conv,
+                                                [i for i in range(kernel_manager.num_kernels)],
+                                                itertools.repeat(signal), itertools.repeat(select_kernel_indexes))):
+            all_convolutions[i] = result
+    return all_convolutions
+
+
+def get_conv(kernel_index, signal, select_kernel_indexes):
+    """
+    Used in process executor to return the signal kernel convolutions
+    :param select_kernel_indexes:
+    :param kernel_index:
+    :type signal: object
+    """
+    if select_kernel_indexes is not None and kernel_index not in select_kernel_indexes:
+        return []
+    else:
+        return signal_utils.calculate_convolution(kernel_manager.all_kernels[kernel_index], signal)
+
+
 def calculate_reconstruction(spike_times, spike_indexes, threshold_crossing_values):
     """
     Once spike times are computed this method computes the reconstruction coefficients
@@ -72,7 +106,6 @@ def calculate_reconstruction(spike_times, spike_indexes, threshold_crossing_valu
     return reconstruction_coefficients
 
 
-# TODO: make sure spikes are in sorted order in this
 def calculate_reconstruction_in_window_mode(spike_times, spike_indexes, threshold_crossing_values,
                                             winddow_size=configuration.window_size):
     """
@@ -125,16 +158,34 @@ def calculate_reconstruction_in_batch_window_mode(spike_times, spike_indexes, th
         end_index = min(batch_size * (b + 1), len(spike_times))
         spikes_to_consider = spike_times[start_index:end_index]
         indexes_to_consider = spike_indexes[start_index:end_index]
-        p_matrix = update_p_matrix_in_windowed_batch_mode(p_matrix,
-                                                          spikes_to_consider, indexes_to_consider, window_offset)
+        if configuration.compute_time:
+            t_1 = time.time()
+        if configuration.parallel_convolution:
+            p_matrix = update_p_matrix_in_windowed_batch_mode_parallel(p_matrix,
+                                                                       spikes_to_consider, indexes_to_consider,
+                                                                       window_offset)
+        else:
+            p_matrix = update_p_matrix_in_windowed_batch_mode(p_matrix,
+                                                              spikes_to_consider, indexes_to_consider, window_offset)
+        if configuration.compute_time:
+            print(f'time for p_matrix update: {time.time() - t_1}')
+            t_1 = time.time()
+
         windowed_eta_vals = p_matrix[:window_offset, window_offset:]
         t_vector = np.array(threshold_crossing_values[start_index + window_offset:end_index]) - \
-                   np.matmul(windowed_eta_vals.T, recons_coeffs[start_index: start_index + window_offset])
+            np.matmul(windowed_eta_vals.T, recons_coeffs[start_index: start_index + window_offset])
+
         t_vector_all = np.zeros(len(spikes_to_consider))
         t_vector_all[window_offset:] = t_vector
+        if configuration.compute_time:
+            print(f'time for t_vector update: {time.time() - t_1}')
+            t_1 = time.time()
         coeffs = common_utils.solve_for_coefficients(p_matrix, t_vector_all).numpy()
         recons_coeffs[start_index:end_index] = \
             recons_coeffs[start_index:end_index] + np.squeeze(coeffs)
+        if configuration.compute_time:
+            print(f'time for recons update: {time.time() - t_1}')
+            t_1 = time.time()
     return recons_coeffs
 
 
@@ -163,6 +214,48 @@ def update_p_matrix_in_windowed_batch_mode(p_matrix, spikes_to_consider,
     updated_p_mat[:window_offset, window_offset:] = all_eta_vals
     # calculate the new block of the p_matrix
     batch_p = calculate_p_matrix(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
+    updated_p_mat[window_offset:, window_offset:] = batch_p
+    return updated_p_mat
+
+
+def update_p_matrix_in_windowed_batch_mode_parallel(p_matrix, spikes_to_consider,
+                                                    indexes_to_consider, window_offset):
+    """
+    This method updates an existing p_matrix to a new one based on a new set of spikes
+    :param window_offset:
+    :param spikes_to_consider:
+    :param indexes_to_consider:
+    :type p_matrix
+    """
+    n_dim = len(spikes_to_consider)
+    updated_p_mat = np.zeros((n_dim, n_dim))
+    updated_p_mat[:window_offset, :window_offset] = p_matrix[-window_offset:, -window_offset:]
+    all_eta_vals = []
+    results = [None for i in range(n_dim - window_offset)]
+    print(f'start with eta parallel')
+    with concurrent.futures.ProcessPoolExecutor(max_workers=configuration.number_of_threads) as executor:
+        for k, result in enumerate(executor.map(calculate_eta, itertools.repeat(spikes_to_consider[:window_offset]),
+                                                itertools.repeat(indexes_to_consider[:window_offset]),
+                                                spikes_to_consider[window_offset:n_dim],
+                                                indexes_to_consider[window_offset:n_dim])):
+            results[k] = result
+    print(f'done with eta parallel')
+    all_eta_vals = np.array(results).T
+    # for i in range(len(results)):
+    #     if len(all_eta_vals) == 0:
+    #         all_eta_vals.append(results[0])
+    #         all_eta_vals = np.reshape(all_eta_vals, (-1, 1))
+    #     else:
+    #         all_eta_vals = np.hstack((all_eta_vals, np.array([results[i]]).T))
+    print(f'done with eta stacking')
+    # include eta values in p_matrix update
+    updated_p_mat[:window_offset, window_offset:] = all_eta_vals
+    # calculate the new block of the p_matrix
+    if configuration.parallel_convolution:
+        batch_p = calculate_p_matrix_parallel(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
+    else:
+        batch_p = calculate_p_matrix(spikes_to_consider[window_offset:], indexes_to_consider[window_offset:])
+    print(f'done with P parallel')
     updated_p_mat[window_offset:, window_offset:] = batch_p
     return updated_p_mat
 
@@ -241,6 +334,47 @@ def calculate_p_matrix(spike_times, spike_indexes, mode=configuration.mode):
         end_time = time.process_time()
         print(f'time taken to compute p_matrix: {end_time - start_time}')
     return p_matrix
+
+
+def calculate_p_matrix_parallel(spike_times, spike_indexes, mode=configuration.mode):
+    """
+    This method populates the entries of the p_matrix
+    :param mode:
+    :param spike_times:
+    :type spike_indexes:
+    """
+    if configuration.verbose:
+        start_time = time.process_time()
+    n = len(spike_times)
+    p_matrix = np.zeros((n, n))
+    with concurrent.futures.ProcessPoolExecutor(max_workers=configuration.number_of_threads) as executor:
+        for i, result in enumerate(executor.map(get_p_row, [i for i in range(n)], itertools.repeat(spike_times),
+                                                itertools.repeat(spike_indexes), itertools.repeat(mode))):
+            p_matrix[i] = result
+    if configuration.verbose:
+        end_time = time.process_time()
+        print(f'time taken to compute p_matrix: {end_time - start_time}')
+    return p_matrix
+
+
+def get_p_row(spike_index, spike_times, spike_indexes, mode=configuration.mode):
+    """
+    This method returns a row of the p-matrix
+    :param spike_index:
+    :param spike_times:
+    :param spike_indexes:
+    :param mode:
+    :return:
+    """
+    this_row = np.zeros(len(spike_times))
+    for j in range(len(spike_times)):
+        try:
+            this_row[j] = kernel_manager.get_kernel_kernel_inner_prod(
+                spike_indexes[spike_index], spike_indexes[j], spike_times[j] - spike_times[spike_index], mode=mode)
+        except Exception as e:
+            raise ValueError(f' exception occurred for P matrix entry of {spike_index}th and {j}th spikes'
+                             f'at times{spike_times[spike_index]} and {spike_times[j]} with exception: {e}')
+    return this_row
 
 
 def calculate_spike_times_and_reconstruct(signal_kernel_convs, reconstruction=True,
@@ -450,7 +584,6 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         all_spikes = all_spikes + spike_times
         all_spike_indexes = all_spike_indexes + spike_indexes
         all_thresholds = all_thresholds + threshold_values
-
     threshold_error = -1
     if configuration.quantized_threshold_transmission:
         threshold_error = spike_generator.get_threshold_transmision_error_rate()
