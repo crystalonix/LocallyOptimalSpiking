@@ -12,7 +12,7 @@ import reconstruction_manager
 import signal_utils
 import wav_file_handler
 
-sample_numbers = [i for i in range(200, 400)]
+sample_numbers = [i for i in range(400, 600)]
 # [i for i in range(9, 30)]
 sample_len = 100000
 snip_len = 10000
