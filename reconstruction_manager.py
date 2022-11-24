@@ -130,7 +130,7 @@ def calculate_reconstruction_in_window_mode(spike_times, spike_indexes, threshol
         # np.dot(recons_coeffs[max(i - winddow_size+1, 0):i], eta_vals)
         coeffs = common_utils.solve_for_coefficients(p_matrix, t_values).numpy()
         recons_coeffs[max(i + 1 - winddow_size, 0):i + 1] = recons_coeffs[max(i + 1 - winddow_size, 0):i + 1] \
-                                                            + np.squeeze(coeffs)
+            + np.squeeze(coeffs)
         if configuration.debug and i % step_len == 0:
             recons = get_reconstructed_signal(spike_times[i], spike_times[:i + 1], spike_indexes[:i + 1], recons_coeffs)
             plot_utils.plot_function(recons)
@@ -173,7 +173,7 @@ def calculate_reconstruction_in_batch_window_mode(spike_times, spike_indexes, th
 
         windowed_eta_vals = p_matrix[:window_offset, window_offset:]
         t_vector = np.array(threshold_crossing_values[start_index + window_offset:end_index]) - \
-            np.matmul(windowed_eta_vals.T, recons_coeffs[start_index: start_index + window_offset])
+                   np.matmul(windowed_eta_vals.T, recons_coeffs[start_index: start_index + window_offset])
 
         t_vector_all = np.zeros(len(spikes_to_consider))
         t_vector_all[window_offset:] = t_vector
@@ -586,8 +586,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     error_rate_fast = -1
     absolute_error_rate = -1
     recons = None
-
-    if (0 < len(spike_times) < max_spike_count) \
+    if (0 < len(all_spikes) < max_spike_count) \
             and (need_error_rate_fast or need_reconstructed_signal or need_error_rate_accurate):
         if configuration.windowing_batch_mode:
             recons_coeffs = calculate_reconstruction_in_batch_window_mode(all_spikes, all_spike_indexes,

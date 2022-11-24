@@ -12,7 +12,7 @@ import reconstruction_manager
 import signal_utils
 import wav_file_handler
 
-sample_numbers = [i for i in range(1, 200)]
+sample_numbers = [i for i in range(200, 400)]
 # [i for i in range(9, 30)]
 sample_len = 100000
 snip_len = 10000
@@ -38,7 +38,7 @@ max_spike = full_signal_len / 1.5
 #           1000000
 # [5e-3, 2e-3, 5e-4, 2e-4, 5e-5, 2e-5, 5e-6, 2e-6, 5e-7, 2e-7, 5e-8, 2e-8, 5e-9, 5e-10]
 win_mode = True
-win_factor = 10e6
+win_factor = 50e6
 max_win_size = 15000
 spike_batch_size = 500
 reconstruct_full_signal = True
@@ -73,6 +73,7 @@ for sample_number in sample_numbers:
                 i = i + 1
                 threshold_error = -1
                 win_size = min(max_win_size, int(win_factor / ahp_period))
+                print(f'win size:{win_size}')
                 if configuration.compute_time:
                     initial_time = time.time()
                 if reconstruct_full_signal:
@@ -106,7 +107,7 @@ for sample_number in sample_numbers:
                 if save_recons_to_wav and reconstruction is not None:
                     signal_to_save = signal_utils.down_sample(reconstruction)
                     file = configuration.training_sub_sample_folder_path + 'reconstruction-' \
-                        + str(sample_number) + '.wav'
+                           + str(sample_number) + '.wav'
                     wav_file_handler.store_float_date_to_wav(file, signal_to_save)
                 if show_plots and reconstruction is not None:
                     plot_utils.plot_functions([signal_utils.down_sample(reconstruction, up_factor=10), actual_signal],
