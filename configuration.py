@@ -1,6 +1,11 @@
+import logging
+
 audio_filepath = 'audio_text/'
 training_sample_folder_path = './../train_curated/'
 training_sub_sample_folder_path = './../audio_train_subsample/'
+
+log_file = 'log.txt'
+logging_level = logging.DEBUG
 
 NUMBER_OF_BSPLINE_COMPONENTS = 200
 SCHUR_POWER = -1.0

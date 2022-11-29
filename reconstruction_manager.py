@@ -16,10 +16,12 @@ import itertools
 
 def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
     all_convolutions = []
-    print(f'length of all kernels {len(kernels_component_bsplines)}')
+    if configuration.debug:
+        print(f'length of all kernels {len(kernels_component_bsplines)}')
     for i in range(len(kernels_component_bsplines)):
         all_convolutions.append(signal_utils.calculate_convolution(kernels_component_bsplines[i], signal))
-        print(f'size of all convs {len(all_convolutions)}')
+        if configuration.debug:
+            print(f'size of all convs {len(all_convolutions)}')
     return all_convolutions
 
 
@@ -488,7 +490,8 @@ def drive_single_signal_reconstruction(signal, init_kernel=True, number_of_kerne
     if (need_reconstructed_signal or need_error_rate_accurate) and recons_coeffs is not None:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
         absolute_error_rate = signal_utils.calculate_absolute_error_rate(signal, recons)
-        print(f'absolute error rate: {absolute_error_rate}')
+        if configuration.debug:
+            print(f'absolute error rate: {absolute_error_rate}')
     return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, absolute_error_rate
 
 
@@ -579,7 +582,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         threshold_error = spike_generator.get_threshold_transmision_error_rate()
         if configuration.verbose:
             print(f'error in threshold transmission: {threshold_error}')
-    if configuration.compute_time:
+    if configuration.debug:
         print(f'time to compute all spikes: {time.process_time() - start_time}')
         start_time = time.process_time()
     recons_coeffs = None
@@ -595,7 +598,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
         else:
             recons_coeffs = calculate_reconstruction_in_window_mode(all_spikes, all_spike_indexes,
                                                                     all_thresholds, winddow_size=window_size)
-        if configuration.compute_time:
+        if configuration.debug:
             print(f'time to compute recons coeffs: {time.process_time() - start_time}')
         if need_error_rate_fast:
             error_rate_fast = calculate_reconstruction_error_rate_fast(recons_coeffs, all_thresholds,
@@ -605,14 +608,15 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             start_time = time.process_time()
             recons = get_reconstructed_signal(len(upsampled_full_signal),
                                               all_spikes, all_spike_indexes, recons_coeffs)
-            if configuration.compute_time:
+            if configuration.debug:
                 print(f'time to compute reconstruction: {time.process_time() - start_time}')
             if configuration.debug:
                 plot_utils.plot_function(recons, title='final full recons')
             absolute_error_rate = signal_utils.calculate_absolute_error_rate(upsampled_full_signal, recons)
-            print(f'absolute error rate: {absolute_error_rate}')
+            if configuration.debug:
+                print(f'absolute error rate: {absolute_error_rate}')
     return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, \
-           error_rate_fast, recons, absolute_error_rate, threshold_error, spiking_threshold
+        error_rate_fast, recons, absolute_error_rate, threshold_error, spiking_threshold
 
 
 def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, number_of_kernels=-1,
@@ -666,7 +670,7 @@ def drive_single_signal_reconstruction_iteratively(signal, init_kernel=True, num
     if need_reconstructed_signal:
         recons = get_reconstructed_signal(len(signal), sp_times, sp_indexes, recons_coeffs)
     return sp_times, sp_indexes, thrs_values, recons_coeffs, error_rate_fast, recons, \
-           signal_kernel_convolutions, z_scores, kernel_projections, gamma_vals, recons_signal, gamma_vals_manual
+        signal_kernel_convolutions, z_scores, kernel_projections, gamma_vals, recons_signal, gamma_vals_manual
 
 # # configuration.upsample_factor = 10
 # # configuration.ahp_period = 100.0 * configuration.upsample_factor

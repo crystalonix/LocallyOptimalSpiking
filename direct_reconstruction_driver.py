@@ -11,6 +11,10 @@ import reconstruction_driver
 import reconstruction_manager
 import signal_utils
 import wav_file_handler
+import logging
+
+# initialize the logger
+logging.basicConfig(filename=configuration.log_file, level=configuration.logging_level)
 
 sample_numbers = [i for i in range(400, 600)]
 # [i for i in range(9, 30)]
@@ -50,8 +54,8 @@ reconstruction_stats = []
 stats_csv_file = 'recons_reports_on_40_kernel.csv'
 signal_from_wav_file = False
 kernel_manager.init(number_of_kernel)
-for i in range(number_of_kernel):
-    print(f'len of kernel: {len(kernel_manager.all_kernels[i])}')
+# for i in range(number_of_kernel):
+#     print(f'len of kernel: {len(kernel_manager.all_kernels[i])}')
 i = 0
 snapshot_interval = 1
 reconstruction_stats = []
@@ -73,7 +77,7 @@ for sample_number in sample_numbers:
                 i = i + 1
                 threshold_error = -1
                 win_size = min(max_win_size, int(win_factor / ahp_period))
-                print(f'win size:{win_size}')
+                logging.debug(f'win size:{win_size}')
                 if configuration.compute_time:
                     initial_time = time.time()
                 if reconstruct_full_signal:
@@ -98,7 +102,7 @@ for sample_number in sample_numbers:
                 time_diff = -1
                 if configuration.compute_time:
                     time_diff = time.time() - initial_time
-                    print(f'time for this iteration: {time_diff}')
+                    logging.debug(f'time for this iteration: {time_diff}')
                 reconstruction_stats.append([sample_number, abs_error, error_rate, threshold_error,
                                              len(spike_times) / len(actual_signal), ahp_period, ahp_high,
                                              spiking_threshold, time_diff, win_size])
@@ -107,7 +111,7 @@ for sample_number in sample_numbers:
                 if save_recons_to_wav and reconstruction is not None:
                     signal_to_save = signal_utils.down_sample(reconstruction)
                     file = configuration.training_sub_sample_folder_path + 'reconstruction-' \
-                           + str(sample_number) + '.wav'
+                        + str(sample_number) + '.wav'
                     wav_file_handler.store_float_date_to_wav(file, signal_to_save)
                 if show_plots and reconstruction is not None:
                     plot_utils.plot_functions([signal_utils.down_sample(reconstruction, up_factor=10), actual_signal],
@@ -116,11 +120,12 @@ for sample_number in sample_numbers:
                     plot_utils.spike_train_plot(spike_times, spike_indexes,
                                                 title=f'all spikes for signal {sample_number}')
                 len_of_signal = full_signal_len if reconstruct_full_signal else sample_len
-                print(f'snippet#: {sample_number}, spike rate: '
-                      f'{configuration.actual_sampling_rate * len(spike_times) / len_of_signal}, '
-                      f'reconstruction error: {error_rate}, '
-                      f'number of spikes: {len(spike_times)} threshold: {spiking_threshold}, ahp high:{ahp_high}',
-                      f'ahp period:{ahp_period}')
+                logging.debug(f'snippet#: {sample_number}, spike rate: '
+                              f'{configuration.actual_sampling_rate * len(spike_times) / len_of_signal}, '
+                              f'reconstruction error: {error_rate}, '
+                              f'number of spikes: {len(spike_times)} '
+                              f'threshold: {spiking_threshold}, ahp high:{ahp_high}',
+                              f'ahp period:{ahp_period}')
                 if i % snapshot_interval == 0:
                     file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
                 if len(spike_times) > max_spike:
