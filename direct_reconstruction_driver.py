@@ -124,7 +124,7 @@ for sample_number in sample_numbers:
                               f'{configuration.actual_sampling_rate * len(spike_times) / len_of_signal}, '
                               f'reconstruction error: {error_rate}, '
                               f'number of spikes: {len(spike_times)} '
-                              f'threshold: {spiking_threshold}, ahp high:{ahp_high}',
+                              f'threshold: {spiking_threshold}, ahp high:{ahp_high},'
                               f'ahp period:{ahp_period}')
                 if i % snapshot_interval == 0:
                     file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
