@@ -203,14 +203,3 @@ def multiply_by_transpose(c_matrix):
     :return: product of the matrix and its transpose
     """
     return np.dot(c_matrix, c_matrix.transpose())
-
-
-#
-# c = np.array([[1, 2], [0, 1]])
-# print(f'matrix product: {multiply_by_transpose(c)}')
-x = np.arange(0, 1.0, 0.01)
-y = x / (1 / -x)
-import plot_utils
-
-plot_utils.plot_function(x, y)
-print('done')
