@@ -23,12 +23,12 @@ snip_len = 10000
 overlap = 7000
 # choosing approx 5s snippets
 full_signal_len = 100000
-number_of_kernel = 50
+number_of_kernel = 100
 # exclude some of the very low frequency kernel to make it computationally efficient
 select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
 signal_norm_thrs = -1.0
 # 1e-4
-spiking_thresholds = np.array([5e-5])
+spiking_thresholds = np.array([5e-6])
 # [5e-5, 5e-6, 5e-7]
 upsample_factor = configuration.upsample_factor
 # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
@@ -36,14 +36,14 @@ ahp_periods = np.array(range(1000, 100, -100)) * configuration.upsample_factor
 ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 20, -20)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([1]) * upsample_factor
+ahp_highs = np.array([10]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
 max_spike = full_signal_len / 1.5
 #           1000000
 # [5e-3, 2e-3, 5e-4, 2e-4, 5e-5, 2e-5, 5e-6, 2e-6, 5e-7, 2e-7, 5e-8, 2e-8, 5e-9, 5e-10]
 win_mode = True
-win_factor = 50e6
-max_win_size = 15000
+win_factor = 1e8
+max_win_size = 25000
 spike_batch_size = 500
 reconstruct_full_signal = True
 show_plots = False

@@ -55,20 +55,22 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 ###########################################################################################
 # following piece of code is used to generate error scatter plot to be used in the paper #
 ###########################################################################################
-# reports_csv = '../csvresults/master_report_new.csv'
-# # minimum spike rate to be considered as a fraction of Nq rate
-# threshold_spike_rate = 0.02
-# results = read_numpy_array_from_csv(reports_csv)
-# filtered_results = results[:, [1, 4]]
-# filtered_results = filtered_results[0 <= filtered_results[:, 0]]
-# filtered_results = filtered_results[filtered_results[:, 0] < 1]
-# filtered_results[:, 0] = -10 * np.log10(filtered_results[:, 0])
+reports_csv = '../csvresults/recons_reports_on_40_kernel_master.csv'
+# minimum spike rate to be considered as a fraction of Nq rate
+threshold_spike_rate = 0.02
+results = read_numpy_array_from_csv(reports_csv)
+filtered_results = results[:, [1, 4]]
+# filter those with early termination due to processing error, error rate has to lie between 0 and 1
+filtered_results = filtered_results[0 <= filtered_results[:, 0]]
+filtered_results = filtered_results[filtered_results[:, 0] < 1]
+filtered_results[:, 0] = -10 * np.log10(filtered_results[:, 0])
 # filtered_results[:, 1] = filtered_results[:, 1] / 10
-# # set a threshold for spike rate
-# filtered_results = filtered_results[threshold_spike_rate <= filtered_results[:, 1]]
-# df = pd.DataFrame(filtered_results, columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
-# sns.lmplot(x='SNR in DB', y = 'spike rate as a fraction of Nyquist rate = 44.1kHz', data=df, scatter_kws={"s": 3},
-#            line_kws={'color': 'purple'})
+# set a threshold for spike rate
+filtered_results = filtered_results[threshold_spike_rate <= filtered_results[:, 1]]
+df = pd.DataFrame(filtered_results, columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
+sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df, scatter_kws={"s": 3},
+           line_kws={'color': 'purple'})
+print('done')
 
 ###########################################################################################
 #   following piece of code is used to plot of comparative study between our technique    #
