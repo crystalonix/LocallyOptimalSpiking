@@ -16,7 +16,7 @@ import logging
 # initialize the logger
 logging.basicConfig(filename=configuration.log_file, level=configuration.logging_level)
 
-sample_numbers = [i for i in range(200, 400)]
+sample_numbers = [i for i in range(1, 200)]
 # [i for i in range(9, 30)]
 sample_len = 100000
 snip_len = 10000
