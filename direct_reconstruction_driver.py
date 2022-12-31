@@ -51,7 +51,7 @@ need_recons = False
 accurate_err = True
 save_recons_to_wav = False
 reconstruction_stats = []
-stats_csv_file = 'recons_reports_on_40_kernel.csv'
+stats_csv_file = 'recons_reports_on_80_kernel.csv'
 signal_from_wav_file = False
 kernel_manager.init(number_of_kernel)
 # for i in range(number_of_kernel):
