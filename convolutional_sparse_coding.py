@@ -6,6 +6,7 @@ import reconstruction_driver
 import math
 import kernel_manager
 import file_utils
+import sporco.admm.cbpdn as cbp
 
 
 def omp_on_signal(signal, max_spike=configuration.max_spike_count,
@@ -37,7 +38,7 @@ def omp_on_signal(signal, max_spike=configuration.max_spike_count,
 
         # choose the atom here
         atom = np.zeros(len(signal))
-        # flip the filter here because the kernels are casual
+        # flip the filter here because the kernels are causal
         kernel_len = np.min([len(filters[select_kernel_indexes[real_max_index[0]]]), real_max_index[1]])
         atom[real_max_index[1]:max(0, real_max_index[1] - kernel_len):-1] = \
             filters[select_kernel_indexes[real_max_index[0]]][:min(kernel_len, real_max_index[1])]
@@ -60,7 +61,7 @@ def omp_on_signal(signal, max_spike=configuration.max_spike_count,
             if i % 10 == 0:
                 print('time taken in next 10 steps', time.time() - initial_time)
         if i % sampling_step_len == 0:
-            reconstruction_stats.append([samp_number, err_rate, i/snippet_length, time.time()-initial_time])
+            reconstruction_stats.append([samp_number, err_rate, i / snippet_length, time.time() - initial_time])
             file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
     print(errors_omp_new)
 
@@ -97,16 +98,45 @@ def calculate_signal_kernel_convs_with_zero_pad(snippet, selected_kernel_indexes
     return all_convolutions
 
 
+def prepare_dictionary(filters, selected_kernels):
+    """
+    Prepares the dictionary of filters
+    :param selected_kernels:
+    :param filters:
+    :return:
+    """
+    dictionary_atoms = None
+    max_len = len(filters[selected_kernels[0]])
+    for s in selected_kernels:
+        f = filters[s]
+        atom = np.zeros(max_len)
+        atom[-1:-len(f) - 1:-1] = f
+        if dictionary_atoms is None:
+            dictionary_atoms = [atom]
+        else:
+            dictionary_atoms = np.append(dictionary_atoms, [atom], axis=0)
+    return dictionary_atoms.T
+
+
 sample_numbers = [i for i in range(9, 20)]
 up_factor = 10
-snippet_length = 5000
-len_with_zero_pad = 90000
+snippet_length = 10000
 initial_zero_pad_len = 0
 signal_from_wav_file = False
 offset = 0
 sampling_step_len = 50
 reconstruction_stats = []
 max_spike_count = 1500
+reports_csv = 'sparse_code.csv'
+number_of_kernel = 10
+# exclude some of the very low frequency kernel to make it computationally efficient
+select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
+kernel_manager.init(number_of_kernels=number_of_kernel)
+fltrs = kernel_manager.all_kernels
+dictionary_matrix = prepare_dictionary(fltrs, select_kernel_indexes)
+initial_zero_pad_len = len(fltrs[select_kernel_indexes[0]])
+len_with_zero_pad = 2 * initial_zero_pad_len + snippet_length * up_factor
+# len_with_zero_pad = snippet_length + len
 for sample_number in sample_numbers:
     signal = reconstruction_driver.get_signal(sample_number, read_from_wav=signal_from_wav_file)
     signal = signal[offset:offset + snippet_length]
@@ -114,15 +144,18 @@ for sample_number in sample_numbers:
 
     signal_snippet = np.zeros(len_with_zero_pad)
     signal_snippet[initial_zero_pad_len:initial_zero_pad_len + (len(signal) - offset)] = signal[offset:]
-
-    number_of_kernel = 10
-    # exclude some of the very low frequency kernel to make it computationally efficient
-    select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
-
-    i = 0
-
-    kernel_manager.init(number_of_kernels=number_of_kernel)
-    fltrs = kernel_manager.all_kernels
-    reports_csv = 'sparse_code.csv'
-    omp_on_signal(signal_snippet, select_kernel_indexes=select_kernel_indexes,
-                  max_spike=max_spike_count,filters=fltrs, samp_number=sample_number)
+    opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 10000,
+                                'RelStopTol': 5e-3, 'AuxVarObj': False})
+    lmbda = 5e-2
+    start = time.time()
+    cs = cbp.ConvBPDN(dictionary_matrix, signal_snippet, lmbda=lmbda, opt=opt, dimN=1, dimK=0)
+    cs.solve()
+    end = time.time()
+    print(f'time taken for this:{cs.timer.elapsed()}, and {end-start}')
+    s_recons = cs.reconstruct().squeeze()
+    coeffs = cs.getcoef()
+    print(f' Step ends with number of spikes: {np.linalg.norm(np.ravel(coeffs), ord=0)} '
+          f' and reconstruction error'
+          f':{np.linalg.norm(signal_snippet - s_recons) / np.linalg.norm(signal_snippet)}')
+    # omp_on_signal(signal_snippet, select_kernel_indexes=select_kernel_indexes,
+    #               max_spike=max_spike_count, filters=fltrs, samp_number=sample_number)
