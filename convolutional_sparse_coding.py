@@ -166,6 +166,6 @@ for snippet_length in snippet_lengths:
                 f':{error_rate} time taken: {time_taken} and lambda: {lmbda}')
             reconstruction_stats.append([sample_number, error_rate, number_of_spikes/snippet_length,
                                          time_taken, snippet_length, lmbda])
-file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
+    file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
 # omp_on_signal(signal_snippet, select_kernel_indexes=select_kernel_indexes,
 #               max_spike=max_spike_count, filters=fltrs, samp_number=sample_number)
