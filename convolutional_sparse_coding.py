@@ -120,8 +120,8 @@ def prepare_dictionary(filters, selected_kernels):
 
 sample_numbers = [i for i in range(1, 20)]
 up_factor = 10
-snippet_lengths = [60000, 70000, 80000]
-    # [20000, 30000, 40000, 50000, 
+snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
+    # [20000, 30000, 40000, 50000,
 initial_zero_pad_len = 0
 signal_from_wav_file = False
 offset = 0
@@ -137,7 +137,7 @@ kernel_manager.init(number_of_kernels=number_of_kernel)
 fltrs = kernel_manager.all_kernels
 dictionary_matrix = prepare_dictionary(fltrs, select_kernel_indexes)
 initial_zero_pad_len = len(fltrs[select_kernel_indexes[0]])
-lmbdas = np.power(10, np.arange(0, -2, -0.2))
+lmbdas = np.power(10, np.arange(1, 0, -0.2))
 for snippet_length in snippet_lengths:
     len_with_zero_pad = 2 * initial_zero_pad_len + snippet_length * up_factor
     # len_with_zero_pad = snippet_length + len
