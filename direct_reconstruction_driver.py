@@ -56,9 +56,9 @@ logging.basicConfig(filename=configuration.log_file, level=configuration.logging
 # signal_from_wav_file = False
 
 ############## config for small set of experiments for CSC comparison ###################
-sample_numbers = [i for i in range(1, 10)]
+sample_numbers = [i for i in range(1, 20)]
 # [i for i in range(9, 30)]
-sample_lens = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
+sample_lens = [20000, 30000, 40000, 50000, 60000]
 overlap = 7000
 # choosing approx 5s snippets
 number_of_kernel = 10
@@ -71,11 +71,11 @@ spiking_thresholds = np.array([5e-6])
 upsample_factor = configuration.upsample_factor
 # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
 ahp_periods = np.array(range(1000, 100, -300)) * configuration.upsample_factor
-ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 10, -10)) * configuration.upsample_factor))
+ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 0, -10)) * configuration.upsample_factor))
 # ahp_periods = np.concatenate((ahp_periods, np.array(range(20, 0, -4)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([10]) * upsample_factor
+ahp_highs = np.array([1]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
 
 #           1000000
