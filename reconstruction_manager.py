@@ -538,22 +538,21 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
     each_kernel_spikes = [[] for i in range(number_of_kernels)]
     start_time = time.process_time()
     spike_generator.init()
-    upsample_first = True
-    if upsample_first:
-        upsampled_full_signal = signal_utils.up_sample(signal)
-        total_signal_norm_square = signal_utils.get_signal_norm_square(upsampled_full_signal)
+    # if upsample_first:
+    upsampled_full_signal = signal_utils.up_sample(signal)
+    total_signal_norm_square = signal_utils.get_signal_norm_square(upsampled_full_signal)
     for i in range(math.ceil(total_len / snippet_len)):
         snippet_begin_time = max(i * snippet_len - overlap_len, 0)
         snippet_end_time = min(len(signal), (i + 1) * snippet_len)
         offset = snippet_begin_time * configuration.upsample_factor
         spike_start_time = min(len(signal), i * snippet_len) * configuration.upsample_factor
-        if upsample_first:
-            snippet = upsampled_full_signal[offset: snippet_end_time * configuration.upsample_factor]
-        else:
-            snippet = signal[snippet_begin_time:snippet_end_time]
-            snippet = signal_utils.up_sample(snippet)
-            total_signal_norm_square = total_signal_norm_square + \
-                                       signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
+        # if upsample_first:
+        snippet = upsampled_full_signal[offset: snippet_end_time * configuration.upsample_factor]
+        # else:
+        #     snippet = signal[snippet_begin_time:snippet_end_time]
+        #     snippet = signal_utils.up_sample(snippet)
+        #     total_signal_norm_square = total_signal_norm_square + \
+        #                                signal_utils.get_signal_norm_square(snippet[spike_start_time - offset:])
 
         signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode,
                                                                  False, selected_kernel_indexes)
@@ -561,8 +560,9 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             max_vals = [np.max(a) if len(a) > 0 else 0 for a in signal_kernel_convolutions]
             max_conv = np.max(max_vals)
 
-            while spiking_threshold > max_conv / 100:
+            while spiking_threshold > max_conv / 1000:
                 spiking_threshold = spiking_threshold / 10
+                ahp_high = ahp_high/10
             if configuration.debug:
                 print(f'max convolution value: {max_conv} and spiking threshold: {spiking_threshold}')
 
