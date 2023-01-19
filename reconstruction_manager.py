@@ -562,7 +562,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
 
             while spiking_threshold > max_conv / 100:
                 spiking_threshold = spiking_threshold / 10
-                # ahp_high = ahp_high/10
+                ahp_high = ahp_high/10
             if configuration.debug:
                 print(f'max convolution value: {max_conv} and spiking threshold: {spiking_threshold}')
 

@@ -75,7 +75,7 @@ ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 0, -10)) * config
 # ahp_periods = np.concatenate((ahp_periods, np.array(range(20, 0, -4)) * configuration.upsample_factor))
 # np.array([1000.0, 500, 200, 100]) * upsample_factor
 # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-ahp_highs = np.array([1]) * upsample_factor
+ahp_highs = np.array([10]) * upsample_factor
 # np.array([1e-1, 1, 10, 100]) * upsample_factor
 
 #           1000000
