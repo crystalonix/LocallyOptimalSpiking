@@ -118,10 +118,11 @@ def prepare_dictionary(filters, selected_kernels):
     return dictionary_atoms.T
 
 
-sample_numbers = [i for i in range(1, 10)]
+# TODO: revert back to actual numbers
+sample_numbers = [i for i in range(7, 10)]
 up_factor = 10
 snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
-    # [20000, 30000, 40000, 50000,
+# [20000, 30000, 40000, 50000,
 initial_zero_pad_len = 0
 signal_from_wav_file = False
 offset = 0
@@ -137,7 +138,7 @@ kernel_manager.init(number_of_kernels=number_of_kernel)
 fltrs = kernel_manager.all_kernels
 dictionary_matrix = prepare_dictionary(fltrs, select_kernel_indexes)
 initial_zero_pad_len = len(fltrs[select_kernel_indexes[0]])
-lmbdas = np.arange(3, .5, -0.3)
+lmbdas = np.arange(5, 3, -0.5)
 for snippet_length in snippet_lengths:
     len_with_zero_pad = 2 * initial_zero_pad_len + snippet_length * up_factor
     # len_with_zero_pad = snippet_length + len
@@ -148,7 +149,7 @@ for snippet_length in snippet_lengths:
 
         signal_snippet = np.zeros(len_with_zero_pad)
         signal_snippet[initial_zero_pad_len:initial_zero_pad_len + (len(signal) - offset)] = signal[offset:]
-        opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 1000,
+        opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 20000,
                                     'RelStopTol': 5e-3, 'AuxVarObj': False})
         for lmbda in lmbdas:
             start = time.time()
@@ -159,13 +160,13 @@ for snippet_length in snippet_lengths:
             s_recons = cs.reconstruct().squeeze()
             coeffs = cs.getcoef()
             error_rate = np.linalg.norm(signal_snippet - s_recons) / np.linalg.norm(signal_snippet)
-            error_rate = error_rate*error_rate
+            error_rate = error_rate * error_rate
             number_of_spikes = np.linalg.norm(np.ravel(coeffs), ord=0)
             print(
                 f' sample number:{sample_number} sample length: {snippet_length} number of spikes: {number_of_spikes} '
                 f' and reconstruction error'
                 f':{error_rate} time taken: {time_taken} and lambda: {lmbda}')
-            reconstruction_stats.append([sample_number, error_rate, number_of_spikes/snippet_length,
+            reconstruction_stats.append([sample_number, error_rate, number_of_spikes / snippet_length,
                                          time_taken, snippet_length, lmbda])
     file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
 # omp_on_signal(signal_snippet, select_kernel_indexes=select_kernel_indexes,
