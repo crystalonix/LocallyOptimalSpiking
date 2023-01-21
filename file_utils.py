@@ -178,116 +178,116 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 #     our technique and advanced sporco based convolutional sparse code techniques        #
 ###########################################################################################
 
-reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
-# minimum spike rate to be considered as a fraction of Nq rate
-length_col_index = 10
-threshold_spike_rate = 0.02
-max_spike_threshold_rate = .6
-min_signal_length = 20000
-max_signal_length = 60000
-small_set_results = read_numpy_array_from_csv(reports_csv)
-smallset_filtered_results = small_set_results[:, [1, 4, length_col_index]]
-smallset_filtered_results = smallset_filtered_results[0 <= smallset_filtered_results[:, 0]]
-smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 0] < 1]
-smallset_filtered_results[:, 0] = -10 * np.log10(smallset_filtered_results[:, 0])
-# set a threshold for spike rate
-smallset_filtered_results = smallset_filtered_results[threshold_spike_rate <= smallset_filtered_results[:, 1]]
-smallset_filtered_results = smallset_filtered_results[max_spike_threshold_rate >= smallset_filtered_results[:, 1]]
-smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 2] <= max_signal_length]
-smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 2] >= min_signal_length]
-df1 = pd.DataFrame(smallset_filtered_results[:, [0, 1]],
-                   columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
-# sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
-#            line_kws={'color': 'purple'})
-
-reports_csv = '../csvresults/cbpdn_coconut.csv'
-length_col_index = 4
-sparse_code_results = read_numpy_array_from_csv(reports_csv)
-filtered_sparse_code_results = sparse_code_results[:, [1, 2, length_col_index]]
-filtered_sparse_code_results = filtered_sparse_code_results[0 <= filtered_sparse_code_results[:, 0]]
-filtered_sparse_code_results = filtered_sparse_code_results[filtered_sparse_code_results[:, 0] < 1]
-filtered_sparse_code_results[:, 0] = -10 * np.log10(filtered_sparse_code_results[:, 0])
-
-# set a threshold for spike rate
-filtered_sparse_code_results = filtered_sparse_code_results[threshold_spike_rate <= filtered_sparse_code_results[:, 1]]
-filtered_sparse_code_results = filtered_sparse_code_results[
-    max_spike_threshold_rate >= filtered_sparse_code_results[:, 1]]
-filtered_sparse_code_results = filtered_sparse_code_results[max_signal_length >= filtered_sparse_code_results[:, 2]]
-filtered_sparse_code_results = filtered_sparse_code_results[min_signal_length <= filtered_sparse_code_results[:, 2]]
-df2 = pd.DataFrame(filtered_sparse_code_results[:, [0, 1]],
-                   columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
-
-concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
-                             df2.assign(dataset='CBPDN')])
-sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz',
-           data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
-print('done')
+# reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
+# # minimum spike rate to be considered as a fraction of Nq rate
+# length_col_index = 10
+# threshold_spike_rate = 0.02
+# max_spike_threshold_rate = .6
+# min_signal_length = 20000
+# max_signal_length = 60000
+# small_set_results = read_numpy_array_from_csv(reports_csv)
+# smallset_filtered_results = small_set_results[:, [1, 4, length_col_index]]
+# smallset_filtered_results = smallset_filtered_results[0 <= smallset_filtered_results[:, 0]]
+# smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 0] < 1]
+# smallset_filtered_results[:, 0] = -10 * np.log10(smallset_filtered_results[:, 0])
+# # set a threshold for spike rate
+# smallset_filtered_results = smallset_filtered_results[threshold_spike_rate <= smallset_filtered_results[:, 1]]
+# smallset_filtered_results = smallset_filtered_results[max_spike_threshold_rate >= smallset_filtered_results[:, 1]]
+# smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 2] <= max_signal_length]
+# smallset_filtered_results = smallset_filtered_results[smallset_filtered_results[:, 2] >= min_signal_length]
+# df1 = pd.DataFrame(smallset_filtered_results[:, [0, 1]],
+#                    columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
+# # sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
+# #            line_kws={'color': 'purple'})
 #
-############################################################################################
-# following piece of code is used to plot the results of the comparative study between     #
-# runtimes of our technique and advanced sporco based convolutional sparse code techniques #
-############################################################################################
-
-reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
-# TODO: set this properly
-time_col_name = 'Length of the audio snippet in ms'
-processing_time_col_name = 'Processing time in second'
-time_col_index = 8
-length_col_index = 10
-small_set_results_with_time = read_numpy_array_from_csv(reports_csv)
-smallset_filtered_results_with_time = small_set_results_with_time[:, [1, 4, time_col_index, length_col_index]]
-smallset_filtered_results_with_time = \
-    smallset_filtered_results_with_time[0 <= smallset_filtered_results_with_time[:, 0]]
-smallset_filtered_results_with_time = \
-    smallset_filtered_results_with_time[smallset_filtered_results_with_time[:, 0] < 1]
-smallset_filtered_results_with_time[:, 0] = -10 * np.log10(smallset_filtered_results_with_time[:, 0])
-smallset_filtered_results_with_time[:, 1] = smallset_filtered_results_with_time[:, 1]
-# set a threshold for spike rate
-smallset_filtered_results_with_time = \
-    smallset_filtered_results_with_time[threshold_spike_rate <= smallset_filtered_results_with_time[:, 1]]
-smallset_filtered_results_with_time = \
-    smallset_filtered_results_with_time[max_spike_threshold_rate >= smallset_filtered_results_with_time[:, 1]]
-
-smallset_filtered_results_with_time = smallset_filtered_results_with_time[min_signal_length
-                                                                          <= smallset_filtered_results_with_time[:, 3]]
-smallset_filtered_results_with_time = smallset_filtered_results_with_time[max_signal_length
-                                                                          >= smallset_filtered_results_with_time[:, 3]]
-smallset_filtered_results_with_time = smallset_filtered_results_with_time[:, [2, 3]]
-smallset_filtered_results_with_time[:, 1] = smallset_filtered_results_with_time[:, 1] / 44.1
-df1 = pd.DataFrame(smallset_filtered_results_with_time,
-                   columns=[processing_time_col_name, time_col_name])
-# sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
-#            line_kws={'color': 'purple'})
-
-reports_csv = '../csvresults/cbpdn_coconut.csv'
-# minimum spike rate to be considered as a fraction of Nq rate
-time_col_index = 3
-length_col_index = 4
-sparse_code_results_with_time = read_numpy_array_from_csv(reports_csv)
-filtered_sparse_code_results_with_time = sparse_code_results_with_time[:, [1, 2, time_col_index, length_col_index]]
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[0 <= filtered_sparse_code_results_with_time[:, 0]]
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[filtered_sparse_code_results_with_time[:, 0] < 1]
-filtered_sparse_code_results_with_time[:, 0] = -10 * np.log10(filtered_sparse_code_results_with_time[:, 0])
-# set a threshold for spike rate
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[threshold_spike_rate <= filtered_sparse_code_results_with_time[:, 1]]
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[max_spike_threshold_rate >= filtered_sparse_code_results_with_time[:, 1]]
-
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[min_signal_length <= filtered_sparse_code_results_with_time[:, 3]]
-filtered_sparse_code_results_with_time = \
-    filtered_sparse_code_results_with_time[max_signal_length >= filtered_sparse_code_results_with_time[:, 3]]
-filtered_sparse_code_results_with_time = filtered_sparse_code_results_with_time[:, [2, 3]]
-filtered_sparse_code_results_with_time[:, 1] = filtered_sparse_code_results_with_time[:, 1] / 44.1
-df2 = pd.DataFrame(filtered_sparse_code_results_with_time,
-                   columns=[processing_time_col_name, time_col_name])
-
-concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
-                             df2.assign(dataset='CBPDN')])
-sns.lmplot(x=time_col_name, y=processing_time_col_name,
-           data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
-
-print('done')
+# reports_csv = '../csvresults/cbpdn_coconut.csv'
+# length_col_index = 4
+# sparse_code_results = read_numpy_array_from_csv(reports_csv)
+# filtered_sparse_code_results = sparse_code_results[:, [1, 2, length_col_index]]
+# filtered_sparse_code_results = filtered_sparse_code_results[0 <= filtered_sparse_code_results[:, 0]]
+# filtered_sparse_code_results = filtered_sparse_code_results[filtered_sparse_code_results[:, 0] < 1]
+# filtered_sparse_code_results[:, 0] = -10 * np.log10(filtered_sparse_code_results[:, 0])
+#
+# # set a threshold for spike rate
+# filtered_sparse_code_results = filtered_sparse_code_results[threshold_spike_rate <= filtered_sparse_code_results[:, 1]]
+# filtered_sparse_code_results = filtered_sparse_code_results[
+#     max_spike_threshold_rate >= filtered_sparse_code_results[:, 1]]
+# filtered_sparse_code_results = filtered_sparse_code_results[max_signal_length >= filtered_sparse_code_results[:, 2]]
+# filtered_sparse_code_results = filtered_sparse_code_results[min_signal_length <= filtered_sparse_code_results[:, 2]]
+# df2 = pd.DataFrame(filtered_sparse_code_results[:, [0, 1]],
+#                    columns=['SNR in DB', 'spike rate as a fraction of Nyquist rate = 44.1kHz'])
+#
+# concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
+#                              df2.assign(dataset='CBPDN')])
+# sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz',
+#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
+# print('done')
+# #
+# ############################################################################################
+# # following piece of code is used to plot the results of the comparative study between     #
+# # runtimes of our technique and advanced sporco based convolutional sparse code techniques #
+# ############################################################################################
+#
+# reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
+# # TODO: set this properly
+# time_col_name = 'Length of the audio snippet in ms'
+# processing_time_col_name = 'Processing time in second'
+# time_col_index = 8
+# length_col_index = 10
+# small_set_results_with_time = read_numpy_array_from_csv(reports_csv)
+# smallset_filtered_results_with_time = small_set_results_with_time[:, [1, 4, time_col_index, length_col_index]]
+# smallset_filtered_results_with_time = \
+#     smallset_filtered_results_with_time[0 <= smallset_filtered_results_with_time[:, 0]]
+# smallset_filtered_results_with_time = \
+#     smallset_filtered_results_with_time[smallset_filtered_results_with_time[:, 0] < 1]
+# smallset_filtered_results_with_time[:, 0] = -10 * np.log10(smallset_filtered_results_with_time[:, 0])
+# smallset_filtered_results_with_time[:, 1] = smallset_filtered_results_with_time[:, 1]
+# # set a threshold for spike rate
+# smallset_filtered_results_with_time = \
+#     smallset_filtered_results_with_time[threshold_spike_rate <= smallset_filtered_results_with_time[:, 1]]
+# smallset_filtered_results_with_time = \
+#     smallset_filtered_results_with_time[max_spike_threshold_rate >= smallset_filtered_results_with_time[:, 1]]
+# 
+# smallset_filtered_results_with_time = smallset_filtered_results_with_time[min_signal_length
+#                                                                           <= smallset_filtered_results_with_time[:, 3]]
+# smallset_filtered_results_with_time = smallset_filtered_results_with_time[max_signal_length
+#                                                                           >= smallset_filtered_results_with_time[:, 3]]
+# smallset_filtered_results_with_time = smallset_filtered_results_with_time[:, [2, 3]]
+# smallset_filtered_results_with_time[:, 1] = smallset_filtered_results_with_time[:, 1] / 44.1
+# df1 = pd.DataFrame(smallset_filtered_results_with_time,
+#                    columns=[processing_time_col_name, time_col_name])
+# # sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
+# #            line_kws={'color': 'purple'})
+#
+# reports_csv = '../csvresults/cbpdn_coconut.csv'
+# # minimum spike rate to be considered as a fraction of Nq rate
+# time_col_index = 3
+# length_col_index = 4
+# sparse_code_results_with_time = read_numpy_array_from_csv(reports_csv)
+# filtered_sparse_code_results_with_time = sparse_code_results_with_time[:, [1, 2, time_col_index, length_col_index]]
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[0 <= filtered_sparse_code_results_with_time[:, 0]]
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[filtered_sparse_code_results_with_time[:, 0] < 1]
+# filtered_sparse_code_results_with_time[:, 0] = -10 * np.log10(filtered_sparse_code_results_with_time[:, 0])
+# # set a threshold for spike rate
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[threshold_spike_rate <= filtered_sparse_code_results_with_time[:, 1]]
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[max_spike_threshold_rate >= filtered_sparse_code_results_with_time[:, 1]]
+#
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[min_signal_length <= filtered_sparse_code_results_with_time[:, 3]]
+# filtered_sparse_code_results_with_time = \
+#     filtered_sparse_code_results_with_time[max_signal_length >= filtered_sparse_code_results_with_time[:, 3]]
+# filtered_sparse_code_results_with_time = filtered_sparse_code_results_with_time[:, [2, 3]]
+# filtered_sparse_code_results_with_time[:, 1] = filtered_sparse_code_results_with_time[:, 1] / 44.1
+# df2 = pd.DataFrame(filtered_sparse_code_results_with_time,
+#                    columns=[processing_time_col_name, time_col_name])
+#
+# concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
+#                              df2.assign(dataset='CBPDN')])
+# sns.lmplot(x=time_col_name, y=processing_time_col_name,
+#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
+#
+# print('done')
