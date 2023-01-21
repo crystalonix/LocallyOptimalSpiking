@@ -119,7 +119,7 @@ def prepare_dictionary(filters, selected_kernels):
 
 
 # TODO: revert back to actual numbers
-sample_numbers = [i for i in range(7, 10)]
+sample_numbers = [i for i in range(1, 20)]
 up_factor = 10
 snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
 # [20000, 30000, 40000, 50000,

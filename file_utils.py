@@ -247,7 +247,7 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 #     smallset_filtered_results_with_time[threshold_spike_rate <= smallset_filtered_results_with_time[:, 1]]
 # smallset_filtered_results_with_time = \
 #     smallset_filtered_results_with_time[max_spike_threshold_rate >= smallset_filtered_results_with_time[:, 1]]
-# 
+#
 # smallset_filtered_results_with_time = smallset_filtered_results_with_time[min_signal_length
 #                                                                           <= smallset_filtered_results_with_time[:, 3]]
 # smallset_filtered_results_with_time = smallset_filtered_results_with_time[max_signal_length
