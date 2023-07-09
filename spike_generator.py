@@ -1,17 +1,81 @@
-import numpy as np
-import time
-import math
-import file_utils
-import plot_utils
-import common_utils
-import signal_utils
-import kernel_manager
-import configuration
 import concurrent.futures
 import itertools
+import time
+
+import numpy as np
+
+import configuration
+import kernel_manager
 
 delta_thres = 0
 abs_thres = 0
+
+
+def lateral_inhibition(time_diff, index1, index2, lateral_high_value=configuration.ahp_high_value,
+                       lateral_refractory_period=configuration.ahp_period):
+    exponent_value = pow(configuration.lateral_inhibition_exponent, index2 - index1)
+    if time_diff > lateral_refractory_period:
+        return 0
+    else:
+        return lateral_high_value * (1 - time_diff / lateral_refractory_period) / exponent_value
+
+
+def calculate_spike_times_with_lateral_inhibition(all_convolutions, ahp_period=configuration.ahp_period,
+                                                  ahp_high=configuration.ahp_high_value,
+                                                  threshold=configuration.spiking_threshold,
+                                                  selected_kernel_indexes=None, offset=0, spike_start_time=0,
+                                                  end_time=-1):
+    all_spike_times = []
+    threshold_values = []
+    spike_indexes = []
+    spikes_of_each_kernel = [[] for i in range(len(all_convolutions))]
+
+    # global abs_thres, delta_thres
+    for i in range(spike_start_time - offset,
+                   len(all_convolutions[selected_kernel_indexes[0]]) if end_time == -1 else end_time - offset):
+        for index in range(len(all_convolutions)):
+            if selected_kernel_indexes is not None and index not in selected_kernel_indexes:
+                continue
+            if i >= len(all_convolutions[index]):
+                continue
+            this_convolution = all_convolutions[index]
+            last_spikes = spikes_of_each_kernel[index]
+            ahp_effect_now = 0
+            for n in range(len(last_spikes) - 1, -1, -1):
+                time_diff = (i + offset) - last_spikes[n]
+                if time_diff > ahp_period:
+                    break
+                else:
+                    ahp_effect_now = ahp_effect_now + \
+                                     ahp_high * ((ahp_period - time_diff) / ahp_period)
+
+            threshold_now = threshold + ahp_effect_now
+            # add the effect due to lateral inhibition
+            for k in selected_kernel_indexes:
+                if k != index and len(spikes_of_each_kernel[k]) != 0:
+                    time_diff = spikes_of_each_kernel[k][len(spikes_of_each_kernel[k]) - 1]
+                    threshold_now = threshold_now + lateral_inhibition(time_diff, index, k,
+                                                                       lateral_high_value=configuration.ahp_high_value,
+                                                                       lateral_refractory_period=configuration.ahp_period)
+            if threshold_now <= this_convolution[i]:
+                if configuration.debug:
+                    print(f' threshold: {threshold_now} and convolution: {this_convolution[i]} and convolution prior:'
+                          f'{-1 if i <= 0 else this_convolution[i - 1]} at time {i} with last spike '
+                          f'{-1 if len(spikes_of_each_kernel[index]) == 0 else spikes_of_each_kernel[index][-1]}'
+                          f' kernel index:{index}')
+                spikes_of_each_kernel[index].append(i + offset)
+                all_spike_times.append(i + offset)
+                spike_indexes.append(index)
+                # if spike_counts is not None:
+                #     spike_counts[index] = spike_counts[index] + 1
+                if configuration.quantized_threshold_transmission:
+                    threshold_values.append(threshold_now)
+                else:
+                    threshold_values.append(this_convolution[i])
+                # if configuration.quantized_threshold_transmission:
+                #     abs_thres = abs_thres + abs(this_convolution[i])
+                #     delta_thres = delta_thres + abs(this_convolution[i] - threshold_now)
+    return all_spike_times, spike_indexes, threshold_values
 
 
 def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period, ahp_high=configuration.ahp_high_value,
@@ -208,7 +272,7 @@ def calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, 
                 if configuration.quantized_threshold_transmission:
                     abs_thres = abs_thres + abs(this_convolution[i])
                     delta_thres = delta_thres + abs(this_convolution[i] - threshold_now)
-    return all_spike_times, spike_indexes, threshold_values
+    return all_spike_times, spike_indexes, threshold_values, spikes_of_each_kernel
 
 
 def calculate_spikes_for_all_kernels_parallel(all_convolutions, selected_kernel_indexes,

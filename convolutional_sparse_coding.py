@@ -105,12 +105,16 @@ def prepare_dictionary(filters, selected_kernels):
     :param filters:
     :return:
     """
+    flip_kernel = False
     dictionary_atoms = None
     max_len = len(filters[selected_kernels[0]])
     for s in selected_kernels:
         f = filters[s]
         atom = np.zeros(max_len)
-        atom[-1:-len(f) - 1:-1] = f
+        if flip_kernel:
+            atom[-1:-len(f) - 1:-1] = f
+        else:
+            atom[: len(f)] = f
         if dictionary_atoms is None:
             dictionary_atoms = [atom]
         else:
@@ -119,7 +123,7 @@ def prepare_dictionary(filters, selected_kernels):
 
 
 # TODO: revert back to actual numbers
-sample_numbers = [i for i in range(1, 20)]
+sample_numbers = [i for i in range(22, 30)]
 up_factor = 10
 snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
 # [20000, 30000, 40000, 50000,
@@ -138,7 +142,7 @@ kernel_manager.init(number_of_kernels=number_of_kernel)
 fltrs = kernel_manager.all_kernels
 dictionary_matrix = prepare_dictionary(fltrs, select_kernel_indexes)
 initial_zero_pad_len = len(fltrs[select_kernel_indexes[0]])
-lmbdas = np.arange(5, 3, -0.5)
+lmbdas = np.arange(3, 0.5, -0.3)
 for snippet_length in snippet_lengths:
     len_with_zero_pad = 2 * initial_zero_pad_len + snippet_length * up_factor
     # len_with_zero_pad = snippet_length + len
@@ -149,7 +153,7 @@ for snippet_length in snippet_lengths:
 
         signal_snippet = np.zeros(len_with_zero_pad)
         signal_snippet[initial_zero_pad_len:initial_zero_pad_len + (len(signal) - offset)] = signal[offset:]
-        opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 20000,
+        opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 1000,
                                     'RelStopTol': 5e-3, 'AuxVarObj': False})
         for lmbda in lmbdas:
             start = time.time()

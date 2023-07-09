@@ -181,8 +181,8 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 # reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
 # # minimum spike rate to be considered as a fraction of Nq rate
 # length_col_index = 10
-# threshold_spike_rate = 0.02
-# max_spike_threshold_rate = .6
+# threshold_spike_rate = 0.05
+# max_spike_threshold_rate = .45
 # min_signal_length = 20000
 # max_signal_length = 60000
 # small_set_results = read_numpy_array_from_csv(reports_csv)
@@ -200,7 +200,7 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 # # sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
 # #            line_kws={'color': 'purple'})
 #
-# reports_csv = '../csvresults/cbpdn_coconut.csv'
+# reports_csv = '../csvresults/cbpdn_master.csv'
 # length_col_index = 4
 # sparse_code_results = read_numpy_array_from_csv(reports_csv)
 # filtered_sparse_code_results = sparse_code_results[:, [1, 2, length_col_index]]
@@ -219,15 +219,17 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 #
 # concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
 #                              df2.assign(dataset='CBPDN')])
-# sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz',
-#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
+# pt = sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz',
+#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3}, legend=False)
+# pt.set(xlabel=None)
+# pt.set(ylabel=None)
 # print('done')
-# #
-# ############################################################################################
-# # following piece of code is used to plot the results of the comparative study between     #
-# # runtimes of our technique and advanced sporco based convolutional sparse code techniques #
-# ############################################################################################
 #
+############################################################################################
+# following piece of code is used to plot the results of the comparative study between     #
+# runtimes of our technique and advanced sporco based convolutional sparse code techniques #
+############################################################################################
+
 # reports_csv = '../csvresults/recons_reports_csc_comparison_10_kernel_lime.csv'
 # # TODO: set this properly
 # time_col_name = 'Length of the audio snippet in ms'
@@ -259,7 +261,7 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 # # sns.lmplot(x='SNR in DB', y='spike rate as a fraction of Nyquist rate = 44.1kHz', data=df1, scatter_kws={"s": 3},
 # #            line_kws={'color': 'purple'})
 #
-# reports_csv = '../csvresults/cbpdn_coconut.csv'
+# reports_csv = '../csvresults/cbpdn_master.csv'
 # # minimum spike rate to be considered as a fraction of Nq rate
 # time_col_index = 3
 # length_col_index = 4
@@ -287,7 +289,8 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
 #
 # concatenated_df = pd.concat([df1.assign(dataset='Our framework'),
 #                              df2.assign(dataset='CBPDN')])
-# sns.lmplot(x=time_col_name, y=processing_time_col_name,
-#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3})
-#
+# pt = sns.lmplot(x=time_col_name, y=processing_time_col_name,
+#            data=concatenated_df, hue='dataset', scatter_kws={"s": 3}, legend=False)
+# pt.set(xlabel=None)
+# pt.set(ylabel=None)
 # print('done')
