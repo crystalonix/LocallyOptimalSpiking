@@ -52,7 +52,9 @@ def calculate_spike_times_with_lateral_inhibition(all_convolutions, ahp_period=c
             threshold_now = threshold + ahp_effect_now
             # add the effect due to lateral inhibition
             for k in selected_kernel_indexes:
-                if k != index and len(spikes_of_each_kernel[k]) != 0:
+                if k != index and len(spikes_of_each_kernel[k]) != 0 and \
+                        (index + configuration.lateral_neighborhood) >= k >= (
+                        index - configuration.lateral_neighborhood):
                     time_diff = spikes_of_each_kernel[k][len(spikes_of_each_kernel[k]) - 1]
                     threshold_now = threshold_now + lateral_inhibition(time_diff, index, k,
                                                                        lateral_high_value=configuration.ahp_high_value,

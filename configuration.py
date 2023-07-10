@@ -11,9 +11,13 @@ NUMBER_OF_BSPLINE_COMPONENTS = 200
 SCHUR_POWER = -1.0
 upsample_factor = 10
 
+# ahp parameters
 ahp_period = 1000.0 * upsample_factor
 ahp_high_value = 5.0e-5 * upsample_factor
+
+# lateral inhibition parameters
 lateral_inhibition_exponent = 2.0
+lateral_neighborhood = 5
 
 spiking_threshold = 5.0e-7
 actual_sampling_rate = 44100.0
@@ -26,7 +30,6 @@ signal_interleaving_length = 7000
 max_spike_count = 1000000
 # this is the max spike rate at which grid search will stop
 max_allowed_spikes = 15000
-
 
 quantized_threshold_transmission = False
 precondition_mode = False

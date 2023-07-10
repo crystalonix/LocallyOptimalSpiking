@@ -12,6 +12,9 @@ import plot_utils
 import math
 import concurrent.futures
 import itertools
+import logging
+
+logging.basicConfig(filename=configuration.log_file, level=configuration.logging_level)
 
 
 def calculate_signal_kernel_bspline_convs(signal, kernels_component_bsplines):
@@ -713,7 +716,10 @@ def drive_signal_reconstruction_with_lateral_inhibition_parallel(signal, init_ke
             print(f'error in threshold transmission: {threshold_error}')
     if configuration.debug:
         print(f'time to compute all spikes: {time.process_time() - start_time}')
-        start_time = time.process_time()
+    print(f'time to compute all spikes: {time.process_time() - start_time}')
+    logging.debug(f'time to compute all spikes: {time.process_time() - start_time}')
+    start_time = time.process_time()
+
     recons_coeffs = None
     error_rate_fast = -1
     absolute_error_rate = -1

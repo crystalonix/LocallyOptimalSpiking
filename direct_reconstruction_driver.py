@@ -28,12 +28,12 @@ snip_len = 10000
 overlap = 7000
 if mode_for_running_this_driver == large_experiment_mode or mode_for_running_this_driver == csc_experiment_mode:
     ##################### uncomment for large set of experiments #########################
-    sample_numbers = [i for i in range(1, 200)]
+    sample_numbers = [i for i in range(4, 200)]
     # [i for i in range(9, 30)]
     sample_lens = [100000]
     # choosing approx 5s snippets
     full_signal_len = 100000
-    number_of_kernel = 20
+    number_of_kernel = 50
     # exclude some of the very low frequency kernels to make it computationally efficient
     select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
     signal_norm_thrs = -1.0
