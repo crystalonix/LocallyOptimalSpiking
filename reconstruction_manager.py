@@ -716,7 +716,6 @@ def drive_signal_reconstruction_with_lateral_inhibition_parallel(signal, init_ke
             print(f'error in threshold transmission: {threshold_error}')
     if configuration.debug:
         print(f'time to compute all spikes: {time.process_time() - start_time}')
-    print(f'time to compute all spikes: {time.process_time() - start_time}')
     logging.debug(f'time to compute all spikes: {time.process_time() - start_time}')
     start_time = time.process_time()
 

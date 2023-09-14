@@ -123,7 +123,7 @@ def prepare_dictionary(filters, selected_kernels):
 
 
 # TODO: revert back to actual numbers
-sample_numbers = [i for i in range(22, 30)]
+sample_numbers = [i for i in range(25, 50)]
 up_factor = 10
 snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
 # [20000, 30000, 40000, 50000,
@@ -133,7 +133,7 @@ offset = 0
 sampling_step_len = 50
 reconstruction_stats = []
 max_spike_count = 1500
-reports_csv = 'cbpdn.csv'
+reports_csv = 'cbpdn_large.csv'
 # reports_csv = 'sparse_code.csv'
 number_of_kernel = 10
 # exclude some of the very low frequency kernel to make it computationally efficient

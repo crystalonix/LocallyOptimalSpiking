@@ -16,8 +16,8 @@ ahp_period = 1000.0 * upsample_factor
 ahp_high_value = 5.0e-5 * upsample_factor
 
 # lateral inhibition parameters
-lateral_inhibition_exponent = 2.0
-lateral_neighborhood = 5
+lateral_inhibition_exponent = 2
+lateral_neighborhood = 10
 
 spiking_threshold = 5.0e-7
 actual_sampling_rate = 44100.0
@@ -43,7 +43,7 @@ parallel_convolution = True
 variable_threshold = True
 threshold_reduction_factor = 10
 
-number_of_threads = 40
+number_of_threads = 10
 verbose = False
 debug = False
 compute_time = True

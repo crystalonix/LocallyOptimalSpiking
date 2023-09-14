@@ -33,7 +33,7 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
     sample_lens = [100000]
     # choosing approx 5s snippets
     full_signal_len = 100000
-    number_of_kernel = 50
+    number_of_kernel = 500
     # exclude some of the very low frequency kernels to make it computationally efficient
     select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
     signal_norm_thrs = -1.0
