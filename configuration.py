@@ -43,7 +43,7 @@ parallel_convolution = True
 variable_threshold = True
 threshold_reduction_factor = 10
 
-number_of_threads = 10
+number_of_threads = 40
 verbose = False
 debug = False
 compute_time = True
