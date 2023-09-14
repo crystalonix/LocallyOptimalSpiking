@@ -125,7 +125,7 @@ def prepare_dictionary(filters, selected_kernels):
 # TODO: revert back to actual numbers
 sample_numbers = [i for i in range(25, 50)]
 up_factor = 10
-snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000, 80000]
+snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000]
 # [20000, 30000, 40000, 50000,
 initial_zero_pad_len = 0
 signal_from_wav_file = False
