@@ -26,14 +26,19 @@ def write_1D_np_array(filename, data, delim=','):
     np.savetxt(filename, data, delimiter=delim)
 
 
-def write_array_to_csv(filename, data, delim=','):
+def write_array_to_csv(filename, data, delim=',', append=True):
     """
     This method writes an array into a csv file with a specified delimiter
+    :param append:
     :param filename:
     :param data:
     :param delim:
     """
-    with open(filename, "w") as f:
+    if append:
+        mode = "a"
+    else:
+        mode = "w"
+    with open(filename, mode) as f:
         writer = csv.writer(f, delimiter=delim)
         writer.writerows(data)
 
@@ -50,7 +55,6 @@ def read_numpy_array_from_csv(filename, delim=',', data_type=float):
     with open(filename, newline='') as csvfile:
         data = list(csv.reader(csvfile, delimiter=delim))
     return np.array(data, dtype=data_type)
-
 
 ###########################################################################################
 # following piece of code is used to generate error scatter plot to be used in the paper #
