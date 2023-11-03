@@ -123,9 +123,9 @@ def prepare_dictionary(filters, selected_kernels):
 
 
 # TODO: revert back to actual numbers
-sample_numbers = [i for i in range(50, 75)]
+sample_numbers = [i for i in range(1, 100)]
 up_factor = 10
-snippet_lengths = [20000, 30000, 40000, 50000, 60000, 70000]
+snippet_lengths = [40000, 50000]
 # [20000, 30000, 40000, 50000,
 initial_zero_pad_len = 0
 signal_from_wav_file = False
@@ -133,7 +133,7 @@ offset = 0
 sampling_step_len = 50
 reconstruction_stats = []
 max_spike_count = 1500
-reports_csv = 'cbpdn_large.csv'
+reports_csv = 'cbpdn_large_incremental.csv'
 # reports_csv = 'sparse_code.csv'
 number_of_kernel = 10
 # exclude some of the very low frequency kernel to make it computationally efficient
@@ -155,6 +155,7 @@ for snippet_length in snippet_lengths:
         signal_snippet[initial_zero_pad_len:initial_zero_pad_len + (len(signal) - offset)] = signal[offset:]
         opt = cbp.ConvBPDN.Options({'Verbose': False, 'MaxMainIter': 1000,
                                     'RelStopTol': 5e-3, 'AuxVarObj': False})
+        reconstruction_stats = []
         for lmbda in lmbdas:
             start = time.time()
             cs = cbp.ConvBPDN(dictionary_matrix, signal_snippet, lmbda=lmbda, opt=opt, dimN=1, dimK=0)
@@ -172,6 +173,7 @@ for snippet_length in snippet_lengths:
                 f':{error_rate} time taken: {time_taken} and lambda: {lmbda}')
             reconstruction_stats.append([sample_number, error_rate, number_of_spikes / snippet_length,
                                          time_taken, snippet_length, lmbda])
-    file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
+        file_utils.write_array_to_csv(filename=reports_csv, data=reconstruction_stats)
+
 # omp_on_signal(signal_snippet, select_kernel_indexes=select_kernel_indexes,
 #               max_spike=max_spike_count, filters=fltrs, samp_number=sample_number)
