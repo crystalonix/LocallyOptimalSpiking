@@ -22,7 +22,7 @@ batch_mode = 2
 demo_mode = 3
 large_experiment_mode = 4
 csc_experiment_mode = 5
-mode_for_running_this_driver = large_experiment_mode
+mode_for_running_this_driver = csc_experiment_mode
 # large_experiment_mode, csc_experiment_mode, demo_mode
 snip_len = 10000
 overlap = 7000
@@ -67,7 +67,7 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
 
     ############## config for small set of experiments for CSC comparison ###################
     if mode_for_running_this_driver == csc_experiment_mode:
-        sample_numbers = [i for i in range(1, 20)]
+        sample_numbers = [i for i in range(1, 100)]
         # [i for i in range(9, 30)]
         sample_lens = [20000, 30000, 40000, 50000, 60000]
         overlap = 7000
@@ -96,13 +96,13 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
         max_win_size = 10000
         spike_batch_size = 500
         reconstruct_full_signal = True
-        reconstruct_with_lateral_inhibition = True
+        reconstruct_with_lateral_inhibition = False
         show_plots = False
         need_recons = False
         accurate_err = True
         save_recons_to_wav = False
         reconstruction_stats = []
-        stats_csv_file = 'recons_reports_csc_comparison_10_kernel.csv'
+        stats_csv_file = 'recons_reports_csc_comparison_10_kernel_large.csv'
         signal_from_wav_file = False
 
     kernel_manager.init(number_of_kernel)
@@ -110,13 +110,14 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
     #     print(f'len of kernel: {len(kernel_manager.all_kernels[i])}')
     i = 0
     snapshot_interval = 1
-    reconstruction_stats = []
+    # reconstruction_stats = []
     for sample_len in sample_lens:
         full_signal_len = sample_len
         # TODO: for small experiments uncomemment the following line
         # snip_len = sample_len
         max_spike = int(full_signal_len * 0.8)
         for sample_number in sample_numbers:
+            reconstruction_stats = []
             full_signal = reconstruction_driver.get_signal(sample_number, read_from_wav=signal_from_wav_file)
             if full_signal_len > - 1:
                 full_signal = full_signal[:full_signal_len]
@@ -199,11 +200,11 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
                                       f'threshold: {spiking_threshold}, ahp high:{ahp_high},'
                                       f'ahp period:{ahp_period}'
                                       f'sample len: {full_signal_len}')
-                        if i % snapshot_interval == 0:
-                            file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
+                        # if i % snapshot_interval == 0:
+                        #     file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
                         if len(spike_times) > max_spike:
                             break
-    file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
+            file_utils.write_array_to_csv(filename=stats_csv_file, data=reconstruction_stats)
 
 ###################################################################################
 ############################ used for a reconstruction demo #######################
