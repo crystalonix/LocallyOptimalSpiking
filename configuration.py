@@ -40,12 +40,12 @@ calculate_recons_coeffs = False
 direct_invert_p = True
 testing = True
 windowing_batch_mode = True
-parallel_convolution = False
+parallel_convolution = True
 
 variable_threshold = True
 threshold_reduction_factor = 10
 
-number_of_threads = 5
+number_of_threads = 40
 verbose = False
 debug = False
 compute_time = True
