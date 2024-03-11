@@ -41,13 +41,21 @@ def calculate_spike_times_with_lateral_inhibition(all_convolutions, ahp_period=c
             this_convolution = all_convolutions[index]
             last_spikes = spikes_of_each_kernel[index]
             ahp_effect_now = 0
-            for n in range(len(last_spikes) - 1, -1, -1):
-                time_diff = (i + offset) - last_spikes[n]
+            if configuration.single_ahp:
+                time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
                 if time_diff > ahp_period:
                     break
                 else:
                     ahp_effect_now = ahp_effect_now + \
                                      ahp_high * ((ahp_period - time_diff) / ahp_period)
+            else:
+                for n in range(len(last_spikes) - 1, -1, -1):
+                    time_diff = (i + offset) - last_spikes[n]
+                    if time_diff > ahp_period:
+                        break
+                    else:
+                        ahp_effect_now = ahp_effect_now + \
+                                         ahp_high * ((ahp_period - time_diff) / ahp_period)
 
             threshold_now = threshold + ahp_effect_now
             # add the effect due to lateral inhibition
