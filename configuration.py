@@ -14,6 +14,8 @@ upsample_factor = 10
 # ahp parameters
 ahp_period = 1000.0 * upsample_factor
 ahp_high_value = 5.0e-5 * upsample_factor
+# denotes whether the ahp drop should consider only one last spike
+single_ahp = True
 
 # lateral inhibition parameters
 lateral_inhibition_exponent = 2
@@ -38,12 +40,12 @@ calculate_recons_coeffs = False
 direct_invert_p = True
 testing = True
 windowing_batch_mode = True
-parallel_convolution = True
+parallel_convolution = False
 
 variable_threshold = True
 threshold_reduction_factor = 10
 
-number_of_threads = 40
+number_of_threads = 5
 verbose = False
 debug = False
 compute_time = True

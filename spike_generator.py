@@ -128,7 +128,7 @@ def calculate_spike_times(all_convolutions, ahp_period=configuration.ahp_period,
                                                       end_time=end_time,
                                                       each_kernel_spikes=each_kernel_spikes)
     else:
-        spike_times, spike_indexes, threshold_values = \
+        spike_times, spike_indexes, threshold_values, _ = \
             calculate_spikes_for_all_kernels(all_convolutions, selected_kernel_indexes, ahp_period,
                                              ahp_high, threshold, spike_counts,
                                              offset=offset,
@@ -355,13 +355,21 @@ def single_kernel_spike_gen(kernel_index, start_time, end_time, offset, kernel_c
     for i in range(start_time - offset,
                    len(kernel_conv) if end_time == -1 else end_time - offset):
         ahp_effect_now = 0
-        for n in range(len(last_spikes) - 1, -1, -1):
-            time_diff = (i + offset) - last_spikes[n]
+        if configuration.single_ahp:
+            time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
             if time_diff > ahp_period:
                 break
             else:
                 ahp_effect_now = ahp_effect_now + \
                                  ahp_high * ((ahp_period - time_diff) / ahp_period)
+        else:
+            for n in range(len(last_spikes) - 1, -1, -1):
+                time_diff = (i + offset) - last_spikes[n]
+                if time_diff > ahp_period:
+                    break
+                else:
+                    ahp_effect_now = ahp_effect_now + \
+                                     ahp_high * ((ahp_period - time_diff) / ahp_period)
 
         threshold_now = threshold + ahp_effect_now
         if all_threshold is not None:
