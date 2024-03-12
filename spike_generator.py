@@ -42,12 +42,13 @@ def calculate_spike_times_with_lateral_inhibition(all_convolutions, ahp_period=c
             last_spikes = spikes_of_each_kernel[index]
             ahp_effect_now = 0
             if configuration.single_ahp:
-                time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
-                if time_diff > ahp_period:
-                    break
-                else:
-                    ahp_effect_now = ahp_effect_now + \
-                                     ahp_high * ((ahp_period - time_diff) / ahp_period)
+                if len(last_spikes) > 0:
+                    time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
+                    if time_diff > ahp_period:
+                        break
+                    else:
+                        ahp_effect_now = ahp_effect_now + \
+                                         ahp_high * ((ahp_period - time_diff) / ahp_period)
             else:
                 for n in range(len(last_spikes) - 1, -1, -1):
                     time_diff = (i + offset) - last_spikes[n]
@@ -364,12 +365,13 @@ def single_kernel_spike_gen(kernel_index, start_time, end_time, offset, kernel_c
                    len(kernel_conv) if end_time == -1 else end_time - offset):
         ahp_effect_now = 0
         if configuration.single_ahp:
-            time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
-            if time_diff > ahp_period:
-                break
-            else:
-                ahp_effect_now = ahp_effect_now + \
-                                 ahp_high * ((ahp_period - time_diff) / ahp_period)
+            if len(last_spikes) > 0:
+                time_diff = (i + offset) - last_spikes[len(last_spikes) - 1]
+                if time_diff > ahp_period:
+                    break
+                else:
+                    ahp_effect_now = ahp_effect_now + \
+                                     ahp_high * ((ahp_period - time_diff) / ahp_period)
         else:
             for n in range(len(last_spikes) - 1, -1, -1):
                 time_diff = (i + offset) - last_spikes[n]
