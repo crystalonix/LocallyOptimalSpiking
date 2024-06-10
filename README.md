@@ -17,6 +17,9 @@ This project implements a framework for encoding continuous time signals using s
     - Information about the licensing terms and authorship.
 
 ## Module Descriptions
+
+The following diagram shows the dependencies between different modules in the project:
+![Dependency Diagram](images/dependency_diagram.png)
 - direct_reconstruction_driver:
 - reconstruction_driver:
 - reconstruction_manager:
