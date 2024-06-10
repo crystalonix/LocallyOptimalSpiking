@@ -2,7 +2,7 @@
 
 This project implements a framework for encoding continuous time signals using spiking neurons.
 
-## Sections
+## Project Overview
 
 1. **Module Descriptions**
     - Brief descriptions of the various modules in the project, highlighting their functionalities.
