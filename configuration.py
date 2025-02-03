@@ -13,7 +13,7 @@
 
 import logging
 
-audio_filepath = 'audio_text/'
+audio_filepath = 'audio_txt/'
 training_sample_folder_path = './../train_curated/'
 training_sub_sample_folder_path = './../audio_train_subsample/'
 
@@ -58,7 +58,7 @@ parallel_convolution = True
 variable_threshold = True
 threshold_reduction_factor = 10
 
-number_of_threads = 40
+number_of_threads = 10
 verbose = False
 debug = False
 compute_time = True

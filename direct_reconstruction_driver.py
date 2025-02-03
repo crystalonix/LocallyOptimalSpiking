@@ -35,11 +35,14 @@ batch_mode = 2
 demo_mode = 3
 large_experiment_mode = 4
 csc_experiment_mode = 5
-mode_for_running_this_driver = csc_experiment_mode
+grid_search_mode = 6
+window_testing_code = 7
+mode_for_running_this_driver = grid_search_mode
 # large_experiment_mode, csc_experiment_mode, demo_mode
 snip_len = 10000
 overlap = 7000
-if mode_for_running_this_driver == large_experiment_mode or mode_for_running_this_driver == csc_experiment_mode:
+if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_this_driver == csc_experiment_mode
+        or mode_for_running_this_driver == grid_search_mode):
     ##################### uncomment for large set of experiments #########################
     sample_numbers = [i for i in range(4, 200)]
     # [i for i in range(9, 30)]
@@ -78,6 +81,44 @@ if mode_for_running_this_driver == large_experiment_mode or mode_for_running_thi
     stats_csv_file = 'recons_reports_on_80_kernel.csv'
     signal_from_wav_file = False
 
+    ############## config for small set of experiments for grid search mode ###################
+    if mode_for_running_this_driver == grid_search_mode:
+        sample_numbers = [5]    #[i for i in range(1, 20)]
+        # [i for i in range(9, 30)]
+        sample_lens = [10000]
+        overlap = 7000
+        number_of_kernel = 10
+        # exclude some of the very low frequency kernel to make it computationally efficient
+        select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
+        signal_norm_thrs = -1.0
+        # 1e-4
+        spiking_thresholds = np.array([5e-6])
+        # [5e-5, 5e-6, 5e-7]
+        upsample_factor = configuration.upsample_factor
+        # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
+        ahp_periods = np.array(range(1000, 100, -300)) * configuration.upsample_factor
+        #ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 0, -10)) * configuration.upsample_factor))
+        # ahp_periods = np.concatenate((ahp_periods, np.array(range(20, 0, -4)) * configuration.upsample_factor))
+        # np.array([1000.0, 500, 200, 100]) * upsample_factor
+        # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
+        ahp_highs = np.array([10]) * upsample_factor
+        # np.array([1e-1, 1, 10, 100]) * upsample_factor
+
+        #           1000000
+        # [5e-3, 2e-3, 5e-4, 2e-4, 5e-5, 2e-5, 5e-6, 2e-6, 5e-7, 2e-7, 5e-8, 2e-8, 5e-9, 5e-10]
+        win_mode = True
+        win_factor = 1e6 * number_of_kernel
+        max_win_size = 10000
+        spike_batch_size = 500
+        reconstruct_full_signal = True
+        reconstruct_with_lateral_inhibition = False
+        show_plots = False
+        need_recons = False
+        accurate_err = True
+        save_recons_to_wav = False
+        reconstruction_stats = []
+        stats_csv_file = 'grid_search.csv'
+        signal_from_wav_file = False
     ############## config for small set of experiments for CSC comparison ###################
     if mode_for_running_this_driver == csc_experiment_mode:
         sample_numbers = [i for i in range(1, 100)]
