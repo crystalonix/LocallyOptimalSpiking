@@ -13,7 +13,7 @@
 
 import numpy as np
 import torch
-import tensorflow as tf
+# import tensorflow as tf
 
 import configuration
 
@@ -107,8 +107,8 @@ def solve_for_coefficients(P, T, method='torch'):
         return torch.tensor([])
     if method == 'torch':
         return solve_for_coefficients_by_torch(P, T)
-    elif method == 'tensorflow':
-        return solve_for_coefficients_by_tf(P, T)
+    # elif method == 'tensorflow':
+    #     return solve_for_coefficients_by_tf(P, T)
     elif method == 'numpy':
         return solve_linear_equn_by_least_square(P, T)
     return None
@@ -118,13 +118,13 @@ def solve_for_coefficients_by_torch(P, T):
     size = len(T)
     P = torch.tensor(P, dtype=torch.float64)
     T = torch.tensor(T, dtype=torch.float64)
-    return torch.linalg.lstsq(T, P).solution
+    return torch.linalg.lstsq(P, T).solution
 
 
-def solve_for_coefficients_by_tf(P, T):
-    P = tf.convert_to_tensor(P)
-    T = tf.convert_to_tensor(T)
-    return tf.linalg.lstsq(P, T, fast=True)
+# def solve_for_coefficients_by_tf(P, T):
+#     P = tf.convert_to_tensor(P)
+#     T = tf.convert_to_tensor(T)
+#     return tf.linalg.lstsq(P, T, fast=True)
 
 
 def solve_for_inverse_by_torch(p_matrix):

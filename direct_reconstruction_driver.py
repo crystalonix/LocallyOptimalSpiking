@@ -83,25 +83,25 @@ if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_th
 
     ############## config for small set of experiments for grid search mode ###################
     if mode_for_running_this_driver == grid_search_mode:
-        sample_numbers = [5]    #[i for i in range(1, 20)]
+        sample_numbers = [i for i in range(1, 20)]
         # [i for i in range(9, 30)]
         sample_lens = [10000]
         overlap = 7000
-        number_of_kernel = 10
+        number_of_kernel = 50
         # exclude some of the very low frequency kernel to make it computationally efficient
         select_kernel_indexes = [i for i in range(math.ceil(number_of_kernel / 10), number_of_kernel)]
         signal_norm_thrs = -1.0
         # 1e-4
-        spiking_thresholds = np.array([5e-6])
+        spiking_thresholds = np.array([5e-4, 5e-5, 5e-6, 5e-7, 5e-8, 5e-9, 5e-10])
         # [5e-5, 5e-6, 5e-7]
         upsample_factor = configuration.upsample_factor
         # arrange the ahp periods in a systematic way so that in tunes the firing rate appropriately
-        ahp_periods = np.array(range(1000, 100, -300)) * configuration.upsample_factor
+        ahp_periods = np.array([10000, 5000, 1000, 500])
         #ahp_periods = np.concatenate((ahp_periods, np.array(range(100, 0, -10)) * configuration.upsample_factor))
         # ahp_periods = np.concatenate((ahp_periods, np.array(range(20, 0, -4)) * configuration.upsample_factor))
         # np.array([1000.0, 500, 200, 100]) * upsample_factor
         # np.array([50, 100, 200, 500, 1000.0, 2000.0]) * upsample_factor
-        ahp_highs = np.array([10]) * upsample_factor
+        ahp_highs = np.array([1, 10, 100, 1000])
         # np.array([1e-1, 1, 10, 100]) * upsample_factor
 
         #           1000000
@@ -166,7 +166,7 @@ if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_th
     # reconstruction_stats = []
     for sample_len in sample_lens:
         full_signal_len = sample_len
-        # TODO: for small experiments uncomemment the following line
+        # TODO: for small experiments uncomment the following line
         # snip_len = sample_len
         max_spike = int(full_signal_len * 0.8)
         for sample_number in sample_numbers:
@@ -182,6 +182,7 @@ if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_th
                 snippet = signal_utils.up_sample(snippet)
                 signal_norm_square, signal_kernel_convolutions = reconstruction_manager.init_signal(snippet,
                                                                                                     configuration.mode)
+            max_conv = -1
             for spiking_threshold in spiking_thresholds:
                 for ahp_high in ahp_highs:
                     ahp_high = ahp_high * spiking_threshold
@@ -194,7 +195,7 @@ if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_th
                             initial_time = time.time()
                         if reconstruct_full_signal and not reconstruct_with_lateral_inhibition:
                             spike_times, spike_indexes, thrshold_values, reconstruction_coefficients, error_rate, \
-                            reconstruction, abs_error, threshold_error, spiking_threshold = \
+                            reconstruction, abs_error, threshold_error, spiking_threshold, max_conv = \
                                 reconstruction_manager.drive_piecewise_signal_reconstruction(
                                     actual_signal, False, number_of_kernels=number_of_kernel,
                                     need_reconstructed_signal=need_recons, ahp_period=ahp_period,
@@ -228,7 +229,7 @@ if (mode_for_running_this_driver == large_experiment_mode or mode_for_running_th
                             time_diff = time.time() - initial_time
                             logging.debug(f'time for this iteration: {time_diff}')
                         reconstruction_stats.append([sample_number, abs_error, error_rate, threshold_error,
-                                                     len(spike_times) / len(actual_signal), ahp_period, ahp_high,
+                                                     len(spike_times), ahp_period, ahp_high,
                                                      spiking_threshold, time_diff, win_size, full_signal_len])
                         if configuration.debug:
                             print(f'all spikes occurring at: {spike_times}')

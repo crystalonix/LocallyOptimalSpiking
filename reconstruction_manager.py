@@ -574,10 +574,11 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
 
         signal_norm_sq, signal_kernel_convolutions = init_signal(snippet, computation_mode,
                                                                  False, selected_kernel_indexes)
-        if configuration.variable_threshold and i == 0:
+        if i == 0:
             max_vals = [np.max(a) if len(a) > 0 else 0 for a in signal_kernel_convolutions]
             max_conv = np.max(max_vals)
 
+        if configuration.variable_threshold and i == 0:
             while spiking_threshold > max_conv / 100:
                 spiking_threshold = spiking_threshold / 10
                 ahp_high = ahp_high / 10
@@ -634,7 +635,7 @@ def drive_piecewise_signal_reconstruction(signal, init_kernel=True, number_of_ke
             if configuration.debug:
                 print(f'absolute error rate: {absolute_error_rate}')
     return all_spikes, all_spike_indexes, all_thresholds, recons_coeffs, \
-           error_rate_fast, recons, absolute_error_rate, threshold_error, spiking_threshold
+           error_rate_fast, recons, absolute_error_rate, threshold_error, spiking_threshold, max_conv
 
 
 def drive_signal_reconstruction_with_lateral_inhibition_parallel(signal, init_kernel=True, number_of_kernels=-1,
