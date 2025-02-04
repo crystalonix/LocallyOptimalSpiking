@@ -118,6 +118,9 @@ def solve_for_coefficients_by_torch(P, T):
     size = len(T)
     P = torch.tensor(P, dtype=torch.float64)
     T = torch.tensor(T, dtype=torch.float64)
+    server_flag = 1
+    if server_flag == 1:
+        return torch.lstsq(T, P).solution
     return torch.linalg.lstsq(P, T).solution
 
 
